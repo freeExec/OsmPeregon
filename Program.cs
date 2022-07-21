@@ -74,6 +74,8 @@ namespace OsmPeregon
                 }
             }
 
+            int gg = roadDictionary.Values.First().ReorderingWays();
+
             foreach (var record in o5mReader.SectionNode)
             {
                 if (edgeDictionary.TryGetValue(record.Id, out List<Edge> edges))
