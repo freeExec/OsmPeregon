@@ -8,22 +8,21 @@ namespace OsmPeregon.Data
 {
     public class Road
     {
-        private readonly List<long> wayIds;
+        private readonly List<Way> ways;
 
         public readonly long Id;
         public readonly string Ref;
         public readonly string Name;
 
-        public IReadOnlyList<long> WayIds => wayIds;
+        public IReadOnlyList<Way> Ways => ways;
 
-        private Way way;
 
-        public Road(long id, string @ref, string name, IReadOnlyList<long> wayRefIds)
+        public Road(long id, string @ref, string name, IEnumerable<Way> ways)
         {
             Id = id;
             Ref = @ref;
             Name = name;
-            wayIds = new List<long>(wayRefIds);
+            this.ways = new List<Way>(ways);
         }
 
         public override string ToString()
@@ -32,11 +31,6 @@ namespace OsmPeregon.Data
                 return Name;
             else
                 return $"{Name} ({Ref})";
-        }
-
-        public void AddWay(Way way)
-        {
-            this.way = way;
         }
     }
 }

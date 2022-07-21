@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define LOCAL
+
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using FormatsOsm;
@@ -8,6 +10,15 @@ namespace OsmPeregon
 {
     class Program
     {
+#if LOCAL
+        private const int OSM_ROAD_COUNT = 10;
+        private const int OSM_WAY_COUNT = 200;
+        private const int OSM_EDGE_COUNT = 1000;
+#else
+        private const int OSM_ROAD_COUNT = 27000;
+        private const int OSM_WAY_COUNT = 100000;
+        private const int OSM_EDGE_COUNT = 100000;
+#endif
 
         static void Main(string[] args)
         {
@@ -15,7 +26,8 @@ namespace OsmPeregon
             var o5mSource = "relation-ural-ulyanovsk.o5m";
             var o5mReader = new O5mStreamReader(o5mSource);
 
-            var roadDictionary = new Dictionary<long, Road>(27000);
+            var roadDictionary = new Dictionary<long, Road>(OSM_ROAD_COUNT);
+            var wayDictionary = new Dictionary<long, Way>(OSM_WAY_COUNT);
 
             foreach (var reader in o5mReader.SectionRelation)
             {
@@ -26,41 +38,53 @@ namespace OsmPeregon
                         reader.Id,
                         reader.GetTagValue(OsmConstants.KEY_REF),
                         reader.GetTagValue(OsmConstants.KEY_NAME),
-                        reader.Refs
+                        reader.Refs.Select(wId => new Way(wId))
                     );
+
+                    foreach (var way in road.Ways)
+                        wayDictionary.Add(way.Id, way);
 
                     roadDictionary.Add(road.Id, road);
                 }
             }
 
-
-
-            //var way2roadLink = roadDictionary.Values.ToLookup(r => r.WayIds, r => r.Id);
-            var way2roadLink = new Dictionary<long, List<Road>>();
-            foreach (var road in roadDictionary.Values)
-            {
-                foreach (var wId in road.WayIds)
-                {
-                    List<Road> roadsWayContains;
-                    if (!way2roadLink.TryGetValue(wId, out roadsWayContains))
-                    {
-                        roadsWayContains = new List<Road>();
-                        way2roadLink.Add(wId, roadsWayContains);
-                    }
-                    roadsWayContains.Add(road);
-                }
-            }
-
-
+            var edgeDictionary = new Dictionary<long, List<Edge>>(OSM_EDGE_COUNT);
 
             foreach (var reader in o5mReader.SectionWay)
             {
-                if (way2roadLink.TryGetValue(reader.Id, out List<Road> roadsWayContains))
+                if (wayDictionary.TryGetValue(reader.Id, out Way way))
                 {
-                    var way = new Way(reader.Id, reader.Refs);
-                    foreach (var road in roadsWayContains)
+                    way.AddEdges(reader.Refs.Pairwise().Select(pair => new Edge(pair.Previous, pair.Current)));
+                    foreach (var edge in way.Edges)
                     {
-                        road.AddWay(way);
+                        Action<long, Edge> addNodeForEdge = (long nodeId, Edge edg) =>
+                        {
+                            List<Edge> nodeForEdges;
+                            if (!edgeDictionary.TryGetValue(nodeId, out nodeForEdges))
+                            {
+                                nodeForEdges = new List<Edge>();
+                                edgeDictionary.Add(nodeId, nodeForEdges);
+                            }
+                            nodeForEdges.Add(edg);
+                        };
+
+                        addNodeForEdge(edge.NodeStart, edge);
+                        addNodeForEdge(edge.NodeEnd, edge);
+                    }
+                }
+            }
+
+            foreach (var record in o5mReader.SectionNode)
+            {
+                if (edgeDictionary.TryGetValue(record.Id, out List<Edge> edges))
+                {
+                    var coord = new int[] { record.LonI, record.LatI };
+                    foreach (var edge in edges)
+                    {
+                        if (record.Id == edge.NodeStart)
+                            edge.Start = coord;
+                        if (record.Id == edge.NodeEnd)
+                            edge.End = coord;
                     }
                 }
             }

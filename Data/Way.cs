@@ -10,14 +10,20 @@ namespace OsmPeregon.Data
     {
         public readonly long Id;
 
-        private readonly List<long> nodeIds;
-        private readonly List<Edge> edges;
+        private List<Edge> edges;
 
-        public Way(long id, IReadOnlyCollection<long> nodeRefs)
+        public ICollection<Edge> Edges => edges;
+
+        public Way(long id)
         {
             Id = id;
-            nodeIds = new List<long>(nodeRefs);
-            edges = new List<Edge>(nodeIds.Count - 1);
         }
+
+        public void AddEdges(IEnumerable<Edge> edges)
+        {
+            this.edges = edges.ToList();
+        }
+
+        public override string ToString() => $"W{Id} - Edge: {edges?.Count ?? 0}";
     }
 }
