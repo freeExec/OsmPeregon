@@ -11,12 +11,20 @@ namespace OsmPeregon.Data
         public readonly long Id;
 
         private List<Edge> edges;
+        public Direction DirectionRole;
 
         public ICollection<Edge> Edges => edges;
 
-        public Way(long id)
+        public Way(long id, string role)
         {
             Id = id;
+            DirectionRole = role switch
+            {
+                "forward" => Direction.Forward,
+                "backward" => Direction.Backward,
+                "" => Direction.Both,
+                _ => Direction.NotSet
+            };
         }
 
         public void AddEdges(IEnumerable<Edge> edges)
@@ -24,6 +32,8 @@ namespace OsmPeregon.Data
             this.edges = edges.ToList();
         }
 
-        public override string ToString() => $"W{Id} - Edge: {edges?.Count ?? 0}";
+        public override string ToString() => $"W{Id} - Edge: {edges?.Count ?? 0} - {DirectionRoleChar}";
+
+        private char DirectionRoleChar => DirectionRole switch { Direction.Forward => '↑', Direction.Backward => '↓', Direction.Both => '⇅', _ => 'X' };
     }
 }

@@ -38,7 +38,7 @@ namespace OsmPeregon
                         reader.Id,
                         reader.GetTagValue(OsmConstants.KEY_REF),
                         reader.GetTagValue(OsmConstants.KEY_NAME),
-                        reader.Refs.Select(wId => new Way(wId))
+                        reader.Members.Select(member => new Way(member.Id, member.Role))
                     );
 
                     foreach (var way in road.Ways)

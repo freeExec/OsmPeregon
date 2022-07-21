@@ -9,6 +9,7 @@ namespace OsmPeregon.Data
     public class Road
     {
         private readonly List<Way> ways;
+        private List<bool> reversed;
 
         public readonly long Id;
         public readonly string Ref;
@@ -23,6 +24,7 @@ namespace OsmPeregon.Data
             Ref = @ref;
             Name = name;
             this.ways = new List<Way>(ways);
+            this.reversed = new List<bool>(this.ways.Count);
         }
 
         public override string ToString()
