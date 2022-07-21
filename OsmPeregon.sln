@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.32002.261
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OsmPeregon", "OsmPeregon.csproj", "{43FEFDA6-984D-4E37-9BB2-1B7D97BEA54B}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "FormatOsm-o5m", "..\..\..\Documents\Visual Studio 2017\Projects\formatOsm-o5m\FormatOsm-o5m.shproj", "{DCC7B1DB-3867-49A2-A876-88A1DB557F97}"
+EndProject
+Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\..\..\Documents\Visual Studio 2017\Projects\formatOsm-o5m\FormatOsm-o5m.projitems*{43fefda6-984d-4e37-9bb2-1b7d97bea54b}*SharedItemsImports = 5
+		..\..\..\Documents\Visual Studio 2017\Projects\formatOsm-o5m\FormatOsm-o5m.projitems*{dcc7b1db-3867-49a2-a876-88a1db557f97}*SharedItemsImports = 13
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{43FEFDA6-984D-4E37-9BB2-1B7D97BEA54B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{43FEFDA6-984D-4E37-9BB2-1B7D97BEA54B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{43FEFDA6-984D-4E37-9BB2-1B7D97BEA54B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{43FEFDA6-984D-4E37-9BB2-1B7D97BEA54B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {88F72434-6DE5-44EE-8CF5-3DD8FE4C6FB4}
+	EndGlobalSection
+EndGlobal
