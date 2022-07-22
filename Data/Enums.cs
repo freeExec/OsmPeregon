@@ -13,4 +13,10 @@ namespace OsmPeregon.Data
         Forward,
         Backward,
     }
+
+    public enum OrderStatus
+    {
+        None,
+        Reserve,
+    }
 }

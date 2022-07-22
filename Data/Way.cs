@@ -12,8 +12,18 @@ namespace OsmPeregon.Data
 
         private List<Edge> edges;
         public Direction DirectionRole;
+        public OrderStatus OrderStatus;
+        public bool IsReverse { get; private set; }
+
+        public bool AllowReverse => DirectionRole == Direction.Both;
 
         public ICollection<Edge> Edges => edges;
+
+        public long FirstNodeRaw => edges.First().NodeStart;
+        public long LastNodeRaw => edges.Last().NodeEnd;
+
+        public long FirstNode => IsReverse ? LastNodeRaw : FirstNodeRaw;
+        public long LastNode => IsReverse ? FirstNodeRaw : LastNodeRaw;
 
         public Way(long id, string role)
         {
@@ -31,6 +41,8 @@ namespace OsmPeregon.Data
         {
             this.edges = edges.ToList();
         }
+
+        public void ReverseDirection() => IsReverse = !IsReverse;
 
         public override string ToString() => $"W{Id} - Edge: {edges?.Count ?? 0} - {DirectionRoleChar}";
 
