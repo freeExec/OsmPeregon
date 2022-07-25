@@ -14,6 +14,7 @@ namespace OsmPeregon
         private const int OSM_ROAD_COUNT = 10;
         private const int OSM_WAY_COUNT = 200;
         private const int OSM_EDGE_COUNT = 1000;
+        private const int OSM_MILESTONE_COUNT = 50;
 #else
         private const int OSM_ROAD_COUNT = 27000;
         private const int OSM_WAY_COUNT = 100000;
@@ -26,6 +27,24 @@ namespace OsmPeregon
             //var o5mSource = "relation-ural-ulyanovsk.o5m";
             var o5mSource = "test-road.o5m";
             var o5mReader = new O5mStreamReader(o5mSource);
+
+            var mailstoneDictionary = new Dictionary<long, float>(OSM_MILESTONE_COUNT);
+
+            foreach (var reader in o5mReader.SectionNode)
+            {
+                if (reader.Contains(OsmConstants.KEY_HIHGWAY, OsmConstants.TAG_MILESTONE))
+                {
+                    var distanceTagStr = reader.GetTagValue(OsmConstants.KEY_DISTANCE);
+                    if (!string.IsNullOrEmpty(distanceTagStr) && float.TryParse(distanceTagStr, out float distanceTag))
+                    {
+                        mailstoneDictionary.Add(reader.Id, distanceTag);
+                    }
+                    else
+                    {
+                        Console.WriteLine(distanceTagStr);
+                    }
+                }
+            }
 
             var roadDictionary = new Dictionary<long, Road>(OSM_ROAD_COUNT);
             var wayDictionary = new Dictionary<long, Way>(OSM_WAY_COUNT);
