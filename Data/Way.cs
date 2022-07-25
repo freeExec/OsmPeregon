@@ -44,7 +44,7 @@ namespace OsmPeregon.Data
 
         public void ReverseDirection() => IsReverse = !IsReverse;
 
-        public override string ToString() => $"W{Id} - Edge: {edges?.Count ?? 0} - {DirectionRoleChar}";
+        public override string ToString() => $"W{Id} - Edge: {edges?.Count ?? 0} - {DirectionRoleChar} [{FirstNode}-{LastNode}]";
 
         private char DirectionRoleChar => DirectionRole switch { Direction.Forward => '↑', Direction.Backward => '↓', Direction.Both => '⇅', _ => 'X' };
     }
