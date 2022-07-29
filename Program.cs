@@ -24,8 +24,8 @@ namespace OsmPeregon
         static void Main(string[] args)
         {
             //var o5mSource = @"d:\frex\Test\OSM\RU_local\highway_road.o5m";
-            //var o5mSource = "relation-ural-ulyanovsk.o5m";
-            var o5mSource = "test-road.o5m";
+            var o5mSource = "relation-ural-ulyanovsk.o5m";
+            //var o5mSource = "test-road.o5m";
             var o5mReader = new O5mStreamReader(o5mSource);
 
             var mailstoneDictionary = new Dictionary<long, float>(OSM_MILESTONE_COUNT);

@@ -9,7 +9,8 @@ namespace OsmPeregon.Data
     public class Road
     {
         private readonly List<Way> ways;
-        private List<bool> reversed;
+        //private List<bool> reversed;
+        private LinkedList<Way> chainForward;
 
         public readonly long Id;
         public readonly string Ref;
@@ -24,7 +25,7 @@ namespace OsmPeregon.Data
             Ref = @ref;
             Name = name;
             this.ways = new List<Way>(ways);
-            this.reversed = new List<bool>(this.ways.Count);
+            //this.reversed = new List<bool>(this.ways.Count);
         }
 
         public override string ToString()
@@ -42,7 +43,7 @@ namespace OsmPeregon.Data
                 .Concat(ways.Select(w => Tuple.Create(w.Edges.Last().NodeEnd, w)));
             var mapEdge = (Lookup<long, Way>)t.ToLookup(s => s.Item1, s => s.Item2);
 
-            var chainForward = new LinkedList<Way>();
+            chainForward = new LinkedList<Way>();
 
             IEnumerable<Way> candidatList = mapEdge.Where(l => l.Count() == 1).First(l => l.Count(w => !w.IsBackward) > 0);
             Way candidatWay = default;
