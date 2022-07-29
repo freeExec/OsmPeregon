@@ -46,16 +46,21 @@ namespace OsmPeregon.Data
             chainForward = new LinkedList<Way>();
 
             IEnumerable<Way> candidatList = mapEdge.Where(l => l.Count() == 1).First(l => l.Count(w => !w.IsBackward) > 0);
+            Way lastWay = default;
             Way candidatWay = default;
 
             do
             {
-
                 candidatWay = candidatList.FirstOrDefault(w => w.OrderStatus != OrderStatus.Reserve && !w.IsBackward);
+                if (candidatWay == null)
+                {
+
+                }
                 if (candidatWay != null)
                 {
                     chainForward.AddLast(candidatWay);
                     candidatWay.OrderStatus = OrderStatus.Reserve;
+                    lastWay = candidatWay;
                     var last = candidatWay.LastNode;
                     candidatList = mapEdge[last];
                 }
