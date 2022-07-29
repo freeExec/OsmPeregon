@@ -37,6 +37,35 @@ namespace OsmPeregon.Data
 
         public int ReorderingWays()
         {
+            var t = ways
+                .Select(w => Tuple.Create(w.Edges.First().NodeStart, w))
+                .Concat(ways.Select(w => Tuple.Create(w.Edges.Last().NodeEnd, w)));
+            var mapEdge = (Lookup<long, Way>)t.ToLookup(s => s.Item1, s => s.Item2);
+
+            var chainForward = new LinkedList<Way>();
+
+            IEnumerable<Way> candidatList = mapEdge.Where(l => l.Count() == 1).First(l => l.Count(w => !w.IsBackward) > 0);
+            Way candidatWay = default;
+
+            do
+            {
+
+                candidatWay = candidatList.FirstOrDefault(w => w.OrderStatus != OrderStatus.Reserve && !w.IsBackward);
+                if (candidatWay != null)
+                {
+                    chainForward.AddLast(candidatWay);
+                    candidatWay.OrderStatus = OrderStatus.Reserve;
+                    var last = candidatWay.LastNode;
+                    candidatList = mapEdge[last];
+                }
+
+            } while (candidatWay != null);
+
+            return chainForward.Count;
+        }
+
+        public int ReorderingWaysOld2()
+        {
             //ways.ForEach(w => w.Reset());
 
             var t = ways
@@ -44,7 +73,7 @@ namespace OsmPeregon.Data
                 .Concat(ways.Select(w => Tuple.Create(w.Edges.Last().NodeEnd, w)));
             var mapEdge = (Lookup<long, Way>)t.ToLookup(s => s.Item1, s => s.Item2);
 
-            var chainForward = new List<Way>();
+            var chainForward = new LinkedList<Way>();
             var chainBackward = new List<Way>();
 
             foreach (var seg in ways)
@@ -61,7 +90,7 @@ namespace OsmPeregon.Data
                 if (chainForward.Count == 0)
                 {
                     seg.OrderStatus = OrderStatus.Reserve;
-                    chainForward.Add(seg);
+                    chainForward.AddLast(seg);
                     continue;
                 }
 
@@ -71,14 +100,14 @@ namespace OsmPeregon.Data
                 if (chainLastSegment.LastNode == seg.FirstNode)
                 {
                     seg.OrderStatus = OrderStatus.Reserve;
-                    chainForward.Add(seg);
+                    chainForward.AddLast(seg);
                     continue;
                 }
                 else if (allowReverse && chainLastSegment.LastNode == seg.LastNode)
                 {
                     seg.ReverseDirection();
                     seg.OrderStatus = OrderStatus.Reserve;
-                    chainForward.Add(seg);
+                    chainForward.AddLast(seg);
                     continue;
                 }
 
@@ -88,14 +117,14 @@ namespace OsmPeregon.Data
                 if (chainFirstSegment.FirstNode == seg.LastNode)
                 {
                     seg.OrderStatus = OrderStatus.Reserve;
-                    chainForward.Insert(0, seg);
+                    chainForward.AddFirst(seg);
                     continue;
                 }
                 else if (allowReverse && chainFirstSegment.FirstNode == seg.FirstNode)
                 {
                     seg.ReverseDirection();
                     seg.OrderStatus = OrderStatus.Reserve;
-                    chainForward.Insert(0, seg);
+                    chainForward.AddFirst(seg);
                     continue;
                 }
 
@@ -117,7 +146,7 @@ namespace OsmPeregon.Data
                         if (directionSearch == 1)
                         {
                             chainForward.Reverse();
-                            chainForward.ForEach(w => w.ReverseDirection());
+//                            chainForward.ForEach(w => w.ReverseDirection());
                         }
 
                         directionSearch++;
@@ -131,7 +160,7 @@ namespace OsmPeregon.Data
                         candidatWay.ReverseDirection();
                     }
 
-                    chainForward.Add(candidatWay);
+                    chainForward.AddLast(candidatWay);
 
                 } while (directionSearch <= 2);
 
@@ -146,7 +175,7 @@ namespace OsmPeregon.Data
                 if (seg.OrderStatus != OrderStatus.Reserve)
                 {
                     seg.OrderStatus = OrderStatus.Reserve;
-                    chainForward.Add(seg);
+                    chainForward.AddLast(seg);
                 }
             }
 
