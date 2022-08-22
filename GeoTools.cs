@@ -68,10 +68,10 @@ namespace H3
         /// <returns>The great circle distance in radians between this and p2.</returns>
         public static double GeoDistRads(int[] p1, int[] p2)
         {
-            double lon = DegsToRads(p1[(int)GeographicIndex.Longitude]);
-            double lat = DegsToRads(p1[(int)GeographicIndex.Latitude]);
-            double p2lon = DegsToRads(p2[(int)GeographicIndex.Longitude]);
-            double p2lat = DegsToRads(p2[(int)GeographicIndex.Latitude]);
+            double lon = DegsToRads(p1[(int)GeographicIndex.Longitude] * FACTOR);
+            double lat = DegsToRads(p1[(int)GeographicIndex.Latitude] * FACTOR);
+            double p2lon = DegsToRads(p2[(int)GeographicIndex.Longitude] * FACTOR);
+            double p2lat = DegsToRads(p2[(int)GeographicIndex.Latitude] * FACTOR);
 
             return GeoDistRads(lon, lat, p2lon, p2lat);
         }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Collections.Generic;
 using FormatsOsm;
 using OsmPeregon.Data;
+using System.IO;
 
 namespace OsmPeregon
 {
@@ -23,6 +24,8 @@ namespace OsmPeregon
 
         static void Main(string[] args)
         {
+            System.Threading.Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+
             //var o5mSource = @"d:\frex\Test\OSM\RU_local\highway_road.o5m";
             //var o5mSource = "relation-ural-ulyanovsk.o5m";
             var o5mSource = "R-178.o5m";
@@ -95,8 +98,6 @@ namespace OsmPeregon
                 }
             }
 
-            int gg = roadDictionary.Values.First().ReorderingWays();
-
             foreach (var record in o5mReader.SectionNode)
             {
                 if (edgeDictionary.TryGetValue(record.Id, out List<Edge> edges))
@@ -111,6 +112,12 @@ namespace OsmPeregon
                     }
                 }
             }
+            
+            int gg = roadDictionary.Values.First().ReorderingWays();
+            float shift = roadDictionary.Values.First().GetShiftMilestones(mailstoneDictionary);
+            string geojson = roadDictionary.Values.First().GenerateGeoJson(shift);
+
+            File.WriteAllText("extrapolation.geojson", geojson);
         }
     }
 }

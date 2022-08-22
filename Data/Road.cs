@@ -1,11 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace OsmPeregon.Data
 {
+    public class MatchMilestone
+    {
+        public float OriginalDistance;
+        public float RealDistance;
+
+        public MatchMilestone(float orig, float real)
+        {
+            OriginalDistance = orig;
+            RealDistance = real;
+        }
+    }
+
     public class Road
     {
         private readonly List<Way> ways;
@@ -78,6 +91,96 @@ namespace OsmPeregon.Data
 
             var nouse = mapEdge.Where(l => l.Any(w => w.OrderStatus != OrderStatus.Reserve)).ToList();
             return chainForward.Count;
+        }
+
+        public float GetShiftMilestones(Dictionary<long, float> osmMilestones)
+        {
+
+            sbGeojson.Length = 0;
+            sbGeojson.AppendLine("{\"type\": \"FeatureCollection\",\"features\": [");
+
+            float length = 0f;
+            var deltas = new List<MatchMilestone>();
+            float lastMile = 0;
+            float lastLength = 0;
+            foreach (var way in chainForward)
+            {
+                foreach (var edge in (way.IsReverse ? way.Edges.Reverse() : way.Edges))
+                {
+                    float mile = 0;
+
+                    long lastNode = way.IsReverse ? edge.NodeStart : edge.NodeEnd;
+
+                    if (osmMilestones.TryGetValue(lastNode, out mile))
+                    {
+                        int gg = 99;
+                    }
+                    length += edge.Length;
+                    if (mile > 0)
+                    {
+                        int[] pp = way.IsReverse ? edge.End : edge.Start;
+                        sbGeojson.Append($"{{\"type\":\"Feature\",\"properties\":{{ \"label\":\"{mile}\"}},");
+                        sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{pp[0] * H3.GeoTools.FACTOR:F6},{pp[1] * H3.GeoTools.FACTOR:F6}]}}}}");
+                        sbGeojson.AppendLine(",");
+
+                        Console.WriteLine($"{mile:000} \t {length:F2} \t {mile - length:F2} \t {(length - lastLength)/(mile - lastMile):F2}");
+                        deltas.Add(new MatchMilestone(mile, length));
+
+                        lastMile = mile;
+                    }
+                    lastLength = length;
+                }
+            }
+
+            sbGeojson.Length -= Environment.NewLine.Length + 1;
+            sbGeojson.AppendLine("]}");
+
+            //File.WriteAllText("orig.geojson", sbGeojson.ToString());
+
+            var avg = deltas.Average(mm => mm.OriginalDistance - mm.RealDistance);
+            return avg;
+        }
+
+
+        private static StringBuilder sbGeojson = new StringBuilder(4096);
+        public string GenerateGeoJson(float startShift)
+        {
+            sbGeojson.Length = 0;
+            sbGeojson.AppendLine("{\"type\": \"FeatureCollection\",\"features\": [");
+            float lengthTotal = startShift;
+            float nextMilestone = MathF.Floor(startShift + 1);
+            foreach (var way in chainForward)
+            {
+                foreach (var edge in (way.IsReverse ? way.Edges.Reverse() : way.Edges))
+                {
+                    float length = edge.Length;
+
+                    while (lengthTotal + length > nextMilestone)
+                    {
+                        var shortLength = nextMilestone - lengthTotal;
+                        float lineFactor = shortLength / length;
+
+                        int[] pp0 = way.IsReverse ? edge.End : edge.Start;
+                        int[] pp1 = way.IsReverse ? edge.Start : edge.End;
+
+                        int posLon = pp0[0] + (int)((pp1[0] - pp0[0]) * lineFactor);
+                        int posLat = pp0[1] + (int)((pp1[1] - pp0[1]) * lineFactor);
+
+                        sbGeojson.Append($"{{\"type\":\"Feature\",\"properties\":{{ \"label\":\"{nextMilestone}\"}},");
+                        sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{posLon * H3.GeoTools.FACTOR:F6},{posLat * H3.GeoTools.FACTOR:F6}]}}}}");
+                        sbGeojson.AppendLine(",");
+
+                        nextMilestone += 1;
+                    }
+
+                    lengthTotal += length;
+                }
+            }
+            
+            sbGeojson.Length -= Environment.NewLine.Length + 1;
+            sbGeojson.AppendLine("]}");
+
+            return sbGeojson.ToString();
         }
 
         public int ReorderingWaysOld2()
