@@ -60,13 +60,23 @@ namespace OsmPeregon.Data
                 {
                     chainForward.AddLast(candidatWay);
                     candidatWay.OrderStatus = OrderStatus.Reserve;
+
+                    if (lastWay != null && lastWay.LastNode != candidatWay.FirstNode)
+                        candidatWay.ReverseDirection();
+
                     lastWay = candidatWay;
                     var last = candidatWay.LastNode;
                     candidatList = mapEdge[last];
                 }
 
+                if (lastWay.Id == 226280382L)
+                {
+                    int gg = 99;
+                }
+
             } while (candidatWay != null);
 
+            var nouse = mapEdge.Where(l => l.Any(w => w.OrderStatus != OrderStatus.Reserve)).ToList();
             return chainForward.Count;
         }
 
