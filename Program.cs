@@ -115,7 +115,7 @@ namespace OsmPeregon
             
             int gg = roadDictionary.Values.First().ReorderingWays();
             float shift = roadDictionary.Values.First().GetShiftMilestones(mailstoneDictionary);
-            string geojson = roadDictionary.Values.First().GenerateGeoJson(shift);
+            string geojson = roadDictionary.Values.First().GenerateGeoJsonFromLinearInterpolate(shift);
 
             File.WriteAllText("extrapolation.geojson", geojson);
         }
