@@ -112,12 +112,15 @@ namespace OsmPeregon
                     }
                 }
             }
-            
+
             int gg = roadDictionary.Values.First().ReorderingWays();
             float shift = roadDictionary.Values.First().GetShiftMilestones(mailstoneDictionary);
-            string geojson = roadDictionary.Values.First().GenerateGeoJsonFromLinearInterpolate(shift);
 
-            File.WriteAllText("extrapolation.geojson", geojson);
+            string geojsonInterpolation = roadDictionary.Values.First().GenerateGeoJsonFromLinearInterpolate(shift);
+            //File.WriteAllText("interpolation.geojson", geojsonInterpolation);
+
+            string geojsonBaseMilestone = roadDictionary.Values.First().GenerateGeoJsonFromBaseMilestone(mailstoneDictionary);
+            File.WriteAllText("interpolation-base-milestone.geojson", geojsonBaseMilestone);
         }
     }
 }

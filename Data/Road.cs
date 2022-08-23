@@ -114,14 +114,10 @@ namespace OsmPeregon.Data
 
                     long lastNode = way.IsReverse ? edge.NodeStart : edge.NodeEnd;
 
-                    if (osmMilestones.TryGetValue(lastNode, out mile))
-                    {
-                        int gg = 99;
-                    }
                     length += edge.Length;
-                    if (mile > 0)
+                    if (osmMilestones.TryGetValue(lastNode, out mile) && mile > 0)
                     {
-                        //int[] pp = way.IsReverse ? edge.End : edge.Start;
+                        //int[] pp = way.IsReverse ? edge.Start : edge.End;
                         //sbGeojson.Append($"{{\"type\":\"Feature\",\"properties\":{{ \"label\":\"{mile}\"}},");
                         //sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{pp[0] * H3.GeoTools.FACTOR:F6},{pp[1] * H3.GeoTools.FACTOR:F6}]}}}}");
                         //sbGeojson.AppendLine(",");
@@ -135,10 +131,11 @@ namespace OsmPeregon.Data
                 }
             }
 
-            sbGeojson.Length -= Environment.NewLine.Length + 1;
-            sbGeojson.AppendLine("]}");
+            //sbGeojson.Length -= Environment.NewLine.Length + 1;
+            //sbGeojson.AppendLine("]}");
+            //var geoJson = sbGeojson.ToString();
 
-            //File.WriteAllText("orig.geojson", sbGeojson.ToString());
+            //File.WriteAllText("orig.geojson", geoJson);
 
             var avg = deltas.Average(mm => mm.OriginalDistance - mm.RealDistance);
             var std = deltas.Std(mm => mm.OriginalDistance - mm.RealDistance);
@@ -180,6 +177,70 @@ namespace OsmPeregon.Data
             sbGeojson.Length -= Environment.NewLine.Length + 1;
             sbGeojson.AppendLine("]}");
 
+            return sbGeojson.ToString();
+        }
+
+        public string GenerateGeoJsonFromBaseMilestone(Dictionary<long, float> osmMilestones)
+        {
+
+            sbGeojson.Length = 0;
+            sbGeojson.AppendLine("{\"type\": \"FeatureCollection\",\"features\": [");
+
+            Action<float, float, Edge, bool> PutMilestoneInJson = (float milestone, float currentLength, Edge edge, bool isReverse) =>
+            {
+                float length = edge.Length;
+                var shortLength = milestone - currentLength;
+                float lineFactor = shortLength / length;
+                int[] pos = edge.InterpolatePosition(isReverse ? 1 - lineFactor : lineFactor);
+
+                sbGeojson.Append($"{{\"type\":\"Feature\",\"properties\":{{ \"label\":\"{milestone}\"}},");
+                sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{pos[0] * H3.GeoTools.FACTOR:F6},{pos[1] * H3.GeoTools.FACTOR:F6}]}}}}");
+                sbGeojson.AppendLine(",");
+            };
+
+            float lengthTotal = 0;
+            float nextMilestone = lengthTotal + 1;
+
+            foreach (var way in chainForward)
+            {
+                foreach (var edge in (way.IsReverse ? way.Edges.Reverse() : way.Edges))
+                {
+                    float length = edge.Length;
+
+                    if (lengthTotal + length >= 162)
+                    {
+                        int gg = 99;
+                    }
+
+                    while (lengthTotal + length > nextMilestone)
+                    {
+                        PutMilestoneInJson(nextMilestone, lengthTotal, edge, way.IsReverse);
+
+                        nextMilestone += 1;
+                    }
+
+                    lengthTotal += length;
+
+                    long lastNode = way.IsReverse ? edge.NodeStart : edge.NodeEnd;
+                    if (osmMilestones.TryGetValue(lastNode, out float mile) && mile > 0)
+                    {
+                        if (mile == 174)
+                        {
+                            int gg = 99;
+                        }
+                        if (lengthTotal < mile)
+                        {
+                            PutMilestoneInJson(mile, way.IsReverse ? mile - length : mile, edge, way.IsReverse);
+                        }
+
+                        lengthTotal = mile;
+                        nextMilestone = lengthTotal + 1;
+                    }
+                }
+            }
+
+            sbGeojson.Length -= Environment.NewLine.Length + 1;
+            sbGeojson.AppendLine("]}");
             return sbGeojson.ToString();
         }
     }
