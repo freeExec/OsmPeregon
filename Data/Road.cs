@@ -183,23 +183,24 @@ namespace OsmPeregon.Data
         public string GenerateGeoJsonFromBaseMilestone(Dictionary<long, float> osmMilestones)
         {
 
-            sbGeojson.Length = 0;
-            sbGeojson.AppendLine("{\"type\": \"FeatureCollection\",\"features\": [");
-
-            Action<float, float, Edge, bool> PutMilestoneInJson = (float milestone, float currentLength, Edge edge, bool isReverse) =>
+            Func<float, float, Edge, bool, bool, (float, int[], bool)> GetMilestone = (float milestone, float currentLength, Edge edge, bool isReverse, bool isOriginal) =>
             {
                 float length = edge.Length;
                 var shortLength = milestone - currentLength;
                 float lineFactor = shortLength / length;
                 int[] pos = edge.InterpolatePosition(isReverse ? 1 - lineFactor : lineFactor);
 
-                sbGeojson.Append($"{{\"type\":\"Feature\",\"properties\":{{ \"label\":\"{milestone}\"}},");
-                sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{pos[0] * H3.GeoTools.FACTOR:F6},{pos[1] * H3.GeoTools.FACTOR:F6}]}}}}");
-                sbGeojson.AppendLine(",");
+                //sbGeojson.Append($"{{\"type\":\"Feature\",\"properties\":{{ \"label\":\"{milestone}\"}},");
+                //sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{pos[0] * H3.GeoTools.FACTOR:F6},{pos[1] * H3.GeoTools.FACTOR:F6}]}}}}");
+                //sbGeojson.AppendLine(",");
+
+                return new(milestone, pos, isOriginal);
             };
 
             float lengthTotal = 0;
             float nextMilestone = lengthTotal + 1;
+            var points = new List<(float Milestone, int[] GeomPosition, bool isOriginal)>(chainForward.Count * 4);
+
 
             foreach (var way in chainForward)
             {
@@ -207,14 +208,9 @@ namespace OsmPeregon.Data
                 {
                     float length = edge.Length;
 
-                    if (lengthTotal + length >= 162)
-                    {
-                        int gg = 99;
-                    }
-
                     while (lengthTotal + length > nextMilestone)
                     {
-                        PutMilestoneInJson(nextMilestone, lengthTotal, edge, way.IsReverse);
+                        points.Add(GetMilestone(nextMilestone, lengthTotal, edge, way.IsReverse, false));
 
                         nextMilestone += 1;
                     }
@@ -224,19 +220,29 @@ namespace OsmPeregon.Data
                     long lastNode = way.IsReverse ? edge.NodeStart : edge.NodeEnd;
                     if (osmMilestones.TryGetValue(lastNode, out float mile) && mile > 0)
                     {
-                        if (mile == 174)
-                        {
-                            int gg = 99;
-                        }
-                        if (lengthTotal < mile)
-                        {
-                            PutMilestoneInJson(mile, way.IsReverse ? mile - length : mile, edge, way.IsReverse);
-                        }
+                        //if (lengthTotal < mile)
+                        //{
+                        points.Add(GetMilestone(mile, way.IsReverse ? mile - length : mile, edge, way.IsReverse, true));
+                        //}
 
                         lengthTotal = mile;
                         nextMilestone = lengthTotal + 1;
                     }
                 }
+            }
+
+            sbGeojson.Length = 0;
+            sbGeojson.AppendLine("{\"type\": \"FeatureCollection\",\"features\": [");
+
+            foreach (var milestoneCollect in points.GroupBy(m => m.Milestone))
+            {
+                var milestoneOrig = milestoneCollect.FirstOrDefault(m => m.isOriginal);
+                if (milestoneOrig == default)
+                    milestoneOrig = milestoneCollect.First();
+
+                sbGeojson.Append($"{{\"type\":\"Feature\",\"properties\":{{ \"label\":\"{milestoneOrig.Milestone}\"}},");
+                sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{milestoneOrig.GeomPosition[0] * H3.GeoTools.FACTOR:F6},{milestoneOrig.GeomPosition[1] * H3.GeoTools.FACTOR:F6}]}}}}");
+                sbGeojson.AppendLine(",");
             }
 
             sbGeojson.Length -= Environment.NewLine.Length + 1;
