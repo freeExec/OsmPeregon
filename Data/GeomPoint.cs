@@ -8,6 +8,10 @@ namespace FreeExec.Geom
 {
     public struct GeomPoint
     {
+        public static readonly GeomPoint Empty = new GeomPoint();
+
+        //private const int INCORRECT_DEG = 200000000;
+
         public const double FACTOR = 1d / 10000000;
 
         public int LongitudeI;
@@ -39,6 +43,8 @@ namespace FreeExec.Geom
             }
         }
 
+        public bool IsEmpty => this == Empty;
+
         public GeomPoint(int xLon, int yLat)
         {
             LongitudeI = xLon;
@@ -54,18 +60,30 @@ namespace FreeExec.Geom
         public int[] GetArray() => new int[] { LongitudeI, LatitudeI };
 
         public static GeomPoint operator +(GeomPoint p1, GeomPoint p2)
-        {
-            return new GeomPoint(p1.LongitudeI + p2.LongitudeI, p1.LatitudeI + p2.LatitudeI);
-        }
+            => new GeomPoint(p1.LongitudeI + p2.LongitudeI, p1.LatitudeI + p2.LatitudeI);        
 
         public static GeomPoint operator -(GeomPoint p1, GeomPoint p2)
-        {
-            return new GeomPoint(p1.LongitudeI - p2.LongitudeI, p1.LatitudeI - p2.LatitudeI);
-        }
+            => new GeomPoint(p1.LongitudeI - p2.LongitudeI, p1.LatitudeI - p2.LatitudeI);        
 
         public static GeomPoint operator *(GeomPoint p1, float scale)
+            => new GeomPoint((int)(p1.LongitudeI * scale), (int)(p1.LatitudeI * scale));
+
+        public static bool operator ==(GeomPoint p1, GeomPoint p2) 
+            => p1.LongitudeI == p2.LongitudeI && p1.LatitudeI == p2.LatitudeI;
+        public static bool operator !=(GeomPoint p1, GeomPoint p2) 
+            => !(p1 == p2);
+
+        public override bool Equals(object obj)
         {
-            return new GeomPoint((int)(p1.LongitudeI * scale), (int)(p1.LatitudeI * scale));
+            if (!(obj is GeomPoint))
+                return false;
+            GeomPoint other = (GeomPoint)obj;
+            return LongitudeI == other.LongitudeI && LatitudeI == other.LatitudeI;
+        }
+
+        public override string ToString()
+        {
+            return $"{Longitude},{Latitude}";
         }
     }
 }

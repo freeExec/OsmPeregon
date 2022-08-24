@@ -18,11 +18,11 @@ namespace OsmPeregon
         private const int OSM_EDGE_COUNT = 1000;
         private const int OSM_MILESTONE_COUNT = 50;
 #else
-        private const int OSM_ROAD_COUNT = 27000;
-        private const int OSM_WAY_COUNT = 100000;
-        private const int OSM_EDGE_COUNT = 100000;
-        private const int OSM_MILESTONE_COUNT = 10000;
-        private const int OSM_NEW_MILESTONE_COUNT = 150000;
+        private const int OSM_ROAD_COUNT          =   37000;
+        private const int OSM_WAY_COUNT           =  322000;
+        private const int OSM_EDGE_COUNT          = 4120000;
+        private const int OSM_MILESTONE_COUNT     =   12000;
+        private const int OSM_NEW_MILESTONE_COUNT =  150000;
 #endif
 
         static void Main(string[] args)
@@ -135,11 +135,17 @@ namespace OsmPeregon
 
             foreach (var road in roadDictionary.Values)
             {
+                if (!road.IsCorrect)
+                {
+                    Console.WriteLine($"Skip road: {road}");
+                    continue;
+                }
+
                 int chainCount = road.CreateChainWays();
                 if (chainCount > 0)
                 {
                     float shift = road.GetShiftMilestones(mailstoneDictionary);
-                    bool hasBaseMalestone = float.IsNaN(shift);
+                    bool hasBaseMalestone = !float.IsNaN(shift);
 
                     if (float.IsNaN(shift))
                     {

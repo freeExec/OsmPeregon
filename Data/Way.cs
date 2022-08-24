@@ -28,6 +28,8 @@ namespace OsmPeregon.Data
         public long FirstNode => IsReverse ? LastNodeRaw : FirstNodeRaw;
         public long LastNode => IsReverse ? FirstNodeRaw : LastNodeRaw;
 
+        public bool IsCorrect => EdgesRaw != null && EdgesRaw.All(e => e.IsCorrect);
+
         public Way(long id, string role)
         {
             Id = id;
@@ -47,7 +49,7 @@ namespace OsmPeregon.Data
 
         public void ReverseDirection() => IsReverse = !IsReverse;
 
-        public override string ToString() => $"W{Id} - Edge: {edges?.Count ?? 0} - {DirectionRoleChar} [{FirstNode}-{LastNode}] {(OrderStatus == OrderStatus.Reserve ? 'v' : ' ')}";
+        public override string ToString() => $"W{Id} - Edge: {edges?.Count ?? 0} {(!IsCorrect ? '-' : ' ')} - {DirectionRoleChar} [{FirstNode}-{LastNode}] {(OrderStatus == OrderStatus.Reserve ? 'v' : ' ')}";
 
         private char DirectionRoleChar => DirectionRole switch { Direction.Forward => '↑', Direction.Backward => '↓', Direction.Both => '⇅', _ => 'X' };
     }

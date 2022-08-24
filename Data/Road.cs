@@ -22,6 +22,7 @@ namespace OsmPeregon.Data
         public readonly string Name;
 
         public IReadOnlyList<Way> Ways => ways;
+        public bool IsCorrect => ways.All(w => w.IsCorrect);
 
         public Road(long id, string @ref, string name, IEnumerable<Way> ways)
         {
@@ -84,11 +85,11 @@ namespace OsmPeregon.Data
             return chainForward.Count;
         }
 
-        public float GetShiftMilestones(Dictionary<long, float> osmMilestones)
+        public float GetShiftMilestones(Dictionary<long, float> osmMilestones, bool forceExit = false)
         {
             float length = 0f;
             //var deltas = new List<MatchMilestone>();
-            var deltas = new List<float>();
+            var errors = new List<float>();
             float lastMile = 0;
             float lastLength = 0;
             foreach (var way in chainForward)
@@ -104,7 +105,7 @@ namespace OsmPeregon.Data
                     {
                         //Console.WriteLine($"{mile:000} \t {length:F2} \t {mile - length:F2} \t {(length - lastLength)/(mile - lastMile):F2}");
                         //deltas.Add(new MatchMilestone(mile, length));
-                        deltas.Add(mile - length);
+                        errors.Add(mile - length);
 
                         lastMile = mile;
                     }
@@ -115,17 +116,19 @@ namespace OsmPeregon.Data
             //var avg = deltas.Average(mm => mm.OriginalDistance - mm.RealDistance);
             //var std = deltas.Std(mm => mm.OriginalDistance - mm.RealDistance);
 
-            if (deltas.Count > 0)
+            if (errors.Count > 0)
             {
-                var avg = deltas.Average();
-                var std = deltas.Std();
-                if (std > 1)
+                var avg = errors.Average();
+                var std = errors.Std();
+                if (std > 100)
                 {
-                    int gg = 99;
                     chainForward.Reverse();
                     chainForward.ForEach(c => c.ReverseDirection());
 
-                    return GetShiftMilestones(osmMilestones);
+                    if (forceExit)
+                        return float.NaN;
+
+                    return GetShiftMilestones(osmMilestones, true);
                 }
                 return avg;
             }
