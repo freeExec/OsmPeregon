@@ -99,6 +99,7 @@ namespace OsmPeregon
                 }
             }
 
+            long lastNodeId = 0;
             foreach (var record in o5mReader.SectionNode)
             {
                 if (edgeDictionary.TryGetValue(record.Id, out List<Edge> edges))
@@ -112,6 +113,7 @@ namespace OsmPeregon
                             edge.End = new GeomPoint(coord);
                     }
                 }
+                lastNodeId = record.Id;
             }
 
             {
@@ -122,14 +124,87 @@ namespace OsmPeregon
 
                 var milestonesInter = road.GetMilestonesLinearInterpolate(shift);
                 string geojsonInterpolation = GeojsonGenerator.FromMilestones(milestonesInter);
-                File.WriteAllText("interpolation.geojson", geojsonInterpolation);
+                //File.WriteAllText("interpolation.geojson", geojsonInterpolation);
 
                 var milestonesBase = road.GetMilestonesBaseOriginal(mailstoneDictionary);
                 string geojsonBaseMilestone = GeojsonGenerator.FromMilestones(milestonesBase);
-                File.WriteAllText("interpolation-base-milestone.geojson", geojsonBaseMilestone);
+                //File.WriteAllText("interpolation-base-milestone.geojson", geojsonBaseMilestone);
 
                 string geojsonOrigMilestone = GeojsonGenerator.FromMilestones(milestonesBase.Where(m => m.IsOriginal));
-                File.WriteAllText("orig.geojson", geojsonOrigMilestone);
+                //File.WriteAllText("orig.geojson", geojsonOrigMilestone);
+
+                long globalNewNodeId = (long)(lastNodeId / 100000.0) * 100000;
+                SaveOsmDumpWithGeneratedMilestones(o5mReader,
+                    milestonesBase
+                        .GroupBy(m => m.Milestone)
+                        .SelectMany(m =>
+                            m.Any(m => m.IsOriginal) ? m.Where(m => m.IsOriginal) : m
+                        ),
+                globalNewNodeId);
+            }
+        }
+
+        public static void SaveOsmDumpWithGeneratedMilestones(O5mStreamReader reader, IEnumerable<MilestonePointToInsertOsm> milestones, long globalNewNodeId)
+        {
+            using (var writer = new O5mStreamWriter("generated-milestones.o5m"))
+            {
+                var node = new FormatsOsm.WriteModel.Node(0, 0, 0);
+                var way = new FormatsOsm.WriteModel.Way(0);
+                var rel = new FormatsOsm.WriteModel.Relation(0);
+
+                bool isNewMilestonesSaved = false;
+
+                foreach (var record in reader)
+                {
+                    switch (record.Type)
+                    {
+                        case O5mHeaderSign.TimeStamp:
+                            writer.WriteFileTimestamp(record.Timestamp);
+                            break;
+
+                        case O5mHeaderSign.Bbox:
+                            int x1 = (int)record.GetRef(0);
+                            int y1 = (int)record.GetRef(1);
+                            int x2 = (int)record.GetRef(2);
+                            int y2 = (int)record.GetRef(3);
+
+                            writer.WriteBbox(x1, y1, x2, y2);
+                            break;
+
+                        case O5mHeaderSign.Node:
+                            node.Fill(record);
+                            writer.WriteNode(node);
+                            break;
+                        case O5mHeaderSign.Way:
+                            if (!isNewMilestonesSaved)
+                            {
+                                MilestonePoint prevMilestone = milestones.First();
+                                foreach (var milestone in milestones)
+                                {
+                                    node.Reset();
+                                    milestone.OsmId = globalNewNodeId++;
+                                    node.Id = milestone.OsmId;
+                                    node.LonI = milestone.GeomPosition.LongitudeI;
+                                    node.LatI = milestone.GeomPosition.LatitudeI;
+                                    node.AddTag(OsmConstants.KEY_HIHGWAY, OsmConstants.TAG_MILESTONE);
+                                    node.AddTag(OsmConstants.KEY_DISTANCE, milestone.Milestone.ToString());
+                                    node.AddTag("generate", "base");
+                                    node.AddTag("error", (1 - (milestone.Milestone - prevMilestone.Milestone)).ToString("F3"));
+                                    writer.WriteNode(node);
+
+                                    prevMilestone = milestone;
+                                }
+                                isNewMilestonesSaved = true;
+                            }
+                            way.Fill(record);
+                            writer.WriteWay(way);
+                            break;
+                        case O5mHeaderSign.Relation:
+                            rel.Fill(record);
+                            writer.WriteRelation(rel);
+                            break;
+                    }
+                }
             }
         }
     }

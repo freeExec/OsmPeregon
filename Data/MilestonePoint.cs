@@ -15,4 +15,17 @@ namespace OsmPeregon.Data
             IsOriginal = isOriginal;
         }
     }
+
+    public class MilestonePointToInsertOsm : MilestonePoint
+    {
+        public Way Way;
+        public Edge Edge;
+        public long OsmId;
+
+        public MilestonePointToInsertOsm(float mile, GeomPoint geom, bool isOriginal)
+            : base(mile, geom, isOriginal)
+        {
+
+        }
+    }
 }

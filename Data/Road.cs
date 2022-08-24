@@ -159,15 +159,15 @@ namespace OsmPeregon.Data
             return milestonePoints;
         }
 
-        public List<MilestonePoint> GetMilestonesBaseOriginal(Dictionary<long, float> osmMilestones)
+        public List<MilestonePointToInsertOsm> GetMilestonesBaseOriginal(Dictionary<long, float> osmMilestones)
         {
-            Func<float, float, Edge, bool, bool, MilestonePoint> GetMilestone = (float milestone, float currentLength, Edge edge, bool isReverse, bool isOriginal) =>
+            Func<float, float, Edge, bool, bool, MilestonePointToInsertOsm> GetMilestone = (float milestone, float currentLength, Edge edge, bool isReverse, bool isOriginal) =>
             {
                 float length = edge.Length;
                 var shortLength = milestone - currentLength;
                 float lineFactor = shortLength / length;
                 GeomPoint pos = edge.InterpolatePosition(isReverse ? 1 - lineFactor : lineFactor);
-                return new MilestonePoint(milestone, pos, isOriginal);
+                return new MilestonePointToInsertOsm(milestone, pos, isOriginal);
             };
 
             float lengthTotal = 0;
@@ -176,9 +176,13 @@ namespace OsmPeregon.Data
             var firstWay = chainForward.First();
             var firstEdge = firstWay.Edges.First();
             var firstPoint = firstEdge.InterpolatePosition(firstWay.IsReverse ? 1 : 0);
-            var milestonePoints = new List<MilestonePoint>(chainForward.Count * 20)
+            var milestonePoints = new List<MilestonePointToInsertOsm>(chainForward.Count * 20)
             {
-                new MilestonePoint(lengthTotal, firstPoint, false)
+                new MilestonePointToInsertOsm(lengthTotal, firstPoint, false)
+                {
+                    Way = firstWay,
+                    Edge = firstEdge
+                }
             };
 
             foreach (var way in chainForward)
@@ -193,7 +197,11 @@ namespace OsmPeregon.Data
                         float lineFactor = shortLength / length;
                         GeomPoint pos = edge.InterpolatePosition(way.IsReverse ? 1 - lineFactor : lineFactor);
 
-                        milestonePoints.Add(new MilestonePoint(nextMilestone, pos, false));
+                        milestonePoints.Add(new MilestonePointToInsertOsm(nextMilestone, pos, false)
+                        {
+                            Way = way,
+                            Edge = edge
+                        });
 
                         nextMilestone += MILESTONE_STEP_KM;
                     }
@@ -203,7 +211,7 @@ namespace OsmPeregon.Data
                     long lastNode = way.IsReverse ? edge.NodeStart : edge.NodeEnd;
                     if (osmMilestones.TryGetValue(lastNode, out float mile) && mile > 0)
                     {
-                        milestonePoints.Add(new MilestonePoint(mile, way.IsReverse ? edge.Start : edge.End, true));
+                        milestonePoints.Add(new MilestonePointToInsertOsm(mile, way.IsReverse ? edge.Start : edge.End, true));
 
                         lengthTotal = mile;
                         nextMilestone = lengthTotal + MILESTONE_STEP_KM;
