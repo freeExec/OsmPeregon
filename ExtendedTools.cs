@@ -24,7 +24,7 @@ namespace FreeExec.Tools
 
             std = std / count;
 
-            return std;
+            return Math.Sqrt(std);
         }
 
         public static float Std(this IEnumerable<float> source)
@@ -42,7 +42,7 @@ namespace FreeExec.Tools
 
             std = std / count;
 
-            return (float)std;
+            return (float)Math.Sqrt(std);
         }
 
         public static double Std(this IEnumerable<double> source)
@@ -60,7 +60,7 @@ namespace FreeExec.Tools
 
             std = std / count;
 
-            return std;
+            return Math.Sqrt(std);
         }
 
         public static double Std<T>(this IEnumerable<T> source, Func<T, int> selector)
@@ -78,7 +78,7 @@ namespace FreeExec.Tools
 
             std = std / count;
 
-            return std;
+            return Math.Sqrt(std);
         }
 
         public static float Std<T>(this IEnumerable<T> source, Func<T, float> selector)
@@ -96,7 +96,7 @@ namespace FreeExec.Tools
 
             std = std / count;
 
-            return (float)std;
+            return (float)Math.Sqrt(std);
         }
 
         public static double Std<T>(this IEnumerable<T> source, Func<T, double> selector)
@@ -114,7 +114,7 @@ namespace FreeExec.Tools
 
             std = std / count;
 
-            return std;
+            return Math.Sqrt(std);
         }
         #endregion
     }

@@ -1,4 +1,4 @@
-﻿//#define LOCAL
+﻿#define LOCAL
 
 using System;
 using System.Collections.Generic;
@@ -17,6 +17,7 @@ namespace OsmPeregon
         private const int OSM_WAY_COUNT = 200;
         private const int OSM_EDGE_COUNT = 1000;
         private const int OSM_MILESTONE_COUNT = 50;
+        private const int OSM_NEW_MILESTONE_COUNT = 1500;
 #else
         private const int OSM_ROAD_COUNT          =   37000;
         private const int OSM_WAY_COUNT           =  322000;
@@ -30,13 +31,14 @@ namespace OsmPeregon
             System.Threading.Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
 
             //var o5mSource = @"d:\frex\Test\OSM\RU_local\highway_road.o5m";
-            var o5mSource = @"i:\MyWorkProg\Map_Gis\Styles\Highway\highway-local-RU.o5m";
+            //var o5mSource = @"i:\MyWorkProg\Map_Gis\Styles\Highway\highway-local-RU.o5m";
             //var o5mSource = "relation-ural-ulyanovsk.o5m";
             //var o5mSource = "R-178.o5m";
+            var o5mSource = "M-8.o5m";
             //var o5mSource = "test-road.o5m";
             var o5mReader = new O5mStreamReader(o5mSource);
 
-            var mailstoneDictionary = new Dictionary<long, float>(OSM_MILESTONE_COUNT);
+            var milestoneDictionary = new Dictionary<long, float>(OSM_MILESTONE_COUNT);
 
             foreach (var record in o5mReader.SectionNode)
             {
@@ -50,7 +52,7 @@ namespace OsmPeregon
                     {
                         if (float.TryParse(distanceTagStr, out float distanceTag))
                         {
-                            mailstoneDictionary.Add(record.Id, distanceTag);
+                            milestoneDictionary.Add(record.Id, distanceTag);
                         }
                         else
                         {
@@ -144,7 +146,9 @@ namespace OsmPeregon
                 int chainCount = road.CreateChainWays();
                 if (chainCount > 0)
                 {
-                    float shift = road.GetShiftMilestones(mailstoneDictionary);
+                    road.CalculationStatistics(milestoneDictionary);
+
+                    float shift = road.GetShiftMilestones(milestoneDictionary);
                     bool hasBaseMalestone = !float.IsNaN(shift);
 
                     if (float.IsNaN(shift))
@@ -160,7 +164,7 @@ namespace OsmPeregon
 
                     if (hasBaseMalestone)
                     {
-                        var milestonesBase = road.GetMilestonesBaseOriginal(mailstoneDictionary);
+                        var milestonesBase = road.GetMilestonesBaseOriginal(milestoneDictionary);
                         //string geojsonBaseMilestone = GeojsonGenerator.FromMilestones(milestonesBase);
                         //File.WriteAllText("interpolation-base-milestone.geojson", geojsonBaseMilestone);
 

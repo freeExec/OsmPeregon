@@ -16,6 +16,10 @@ namespace OsmPeregon.Data
         private readonly List<Way> ways;
         //private List<bool> reversed;
         private List<Way> chainForward;
+        private float statStartMilestone;
+
+        private float outlierMin;
+        private float outlierMax;
 
         public readonly long Id;
         public readonly string Ref;
@@ -83,6 +87,52 @@ namespace OsmPeregon.Data
 
             var nouse = mapEdge.Where(l => l.Any(w => w.OrderStatus != OrderStatus.Reserve)).ToList();
             return chainForward.Count;
+        }
+
+        public void CalculationStatistics(Dictionary<long, float> osmMilestones, bool forceExit = false)
+        {
+            float length = 0f;
+            var errors = new List<float>();
+            float lastMile = 0;
+            float lastLength = 0;
+            
+            int nextLess = 0;
+            int nextMore = 0;
+            foreach (var way in chainForward)
+            {
+                foreach (var edge in (way.Edges))
+                {
+                    float mile = 0;
+
+                    long lastNode = way.IsReverse ? edge.NodeStart : edge.NodeEnd;
+
+                    length += edge.Length;
+                    if (osmMilestones.TryGetValue(lastNode, out mile) && mile > 0)
+                    {
+                        if (mile > lastMile)
+                            nextMore++;
+                        else
+                            nextLess++;
+
+                        errors.Add(mile - length);
+                        lastMile = mile;
+                    }
+                    lastLength = length;
+                }
+            }
+
+            if (nextLess > nextMore)
+            {
+                chainForward.Reverse();
+                chainForward.ForEach(c => c.ReverseDirection());
+
+                CalculationStatistics(osmMilestones, true);
+                return;
+            }
+
+            statStartMilestone = errors.Average();
+            (outlierMin, outlierMax) = Outlier.GetOutlierBoundary(errors, true);
+            statStartMilestone = errors.Where(e => e > outlierMin && e < outlierMax).Average();
         }
 
         public float GetShiftMilestones(Dictionary<long, float> osmMilestones, bool forceExit = false)
