@@ -138,7 +138,7 @@ namespace OsmPeregon.Data
 
             foreach (var way in chainForward)
             {
-                foreach (var edge in (way.IsReverse ? way.Edges.Reverse() : way.Edges))
+                foreach (var edge in way.Edges)
                 {
                     float length = edge.Length;
 
