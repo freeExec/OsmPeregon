@@ -114,13 +114,23 @@ namespace OsmPeregon.Data
 
             //var avg = deltas.Average(mm => mm.OriginalDistance - mm.RealDistance);
             //var std = deltas.Std(mm => mm.OriginalDistance - mm.RealDistance);
-            var avg = deltas.Average();
-            var std = deltas.Std();
-            if (std > 1)
+
+            if (deltas.Count > 0)
             {
-                int gg = 99;
+                var avg = deltas.Average();
+                var std = deltas.Std();
+                if (std > 1)
+                {
+                    int gg = 99;
+                    chainForward.Reverse();
+                    chainForward.ForEach(c => c.ReverseDirection());
+
+                    return GetShiftMilestones(osmMilestones);
+                }
+                return avg;
             }
-            return avg;
+
+            return float.NaN;
         }
 
         public List<MilestonePoint> GetMilestonesLinearInterpolate(float startShift)

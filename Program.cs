@@ -1,4 +1,4 @@
-﻿#define LOCAL
+﻿//#define LOCAL
 
 using System;
 using System.Collections.Generic;
@@ -21,6 +21,8 @@ namespace OsmPeregon
         private const int OSM_ROAD_COUNT = 27000;
         private const int OSM_WAY_COUNT = 100000;
         private const int OSM_EDGE_COUNT = 100000;
+        private const int OSM_MILESTONE_COUNT = 10000;
+        private const int OSM_NEW_MILESTONE_COUNT = 150000;
 #endif
 
         static void Main(string[] args)
@@ -28,25 +30,32 @@ namespace OsmPeregon
             System.Threading.Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
 
             //var o5mSource = @"d:\frex\Test\OSM\RU_local\highway_road.o5m";
+            var o5mSource = @"i:\MyWorkProg\Map_Gis\Styles\Highway\highway-local-RU.o5m";
             //var o5mSource = "relation-ural-ulyanovsk.o5m";
-            var o5mSource = "R-178.o5m";
+            //var o5mSource = "R-178.o5m";
             //var o5mSource = "test-road.o5m";
             var o5mReader = new O5mStreamReader(o5mSource);
 
             var mailstoneDictionary = new Dictionary<long, float>(OSM_MILESTONE_COUNT);
 
-            foreach (var reader in o5mReader.SectionNode)
+            foreach (var record in o5mReader.SectionNode)
             {
-                if (reader.Contains(OsmConstants.KEY_HIHGWAY, OsmConstants.TAG_MILESTONE))
+                if (record.Contains(OsmConstants.KEY_HIHGWAY, OsmConstants.TAG_MILESTONE))
                 {
-                    var distanceTagStr = reader.GetTagValue(OsmConstants.KEY_DISTANCE);
-                    if (!string.IsNullOrEmpty(distanceTagStr) && float.TryParse(distanceTagStr, out float distanceTag))
+                    var distanceTagStr = record.GetTagValue(OsmConstants.KEY_DISTANCE);
+                    if (string.IsNullOrEmpty(distanceTagStr))
+                        distanceTagStr = record.GetTagValue(OsmConstants.KEY_PK);
+
+                    if (!string.IsNullOrEmpty(distanceTagStr))
                     {
-                        mailstoneDictionary.Add(reader.Id, distanceTag);
-                    }
-                    else
-                    {
-                        Console.WriteLine(distanceTagStr);
+                        if (float.TryParse(distanceTagStr, out float distanceTag))
+                        {
+                            mailstoneDictionary.Add(record.Id, distanceTag);
+                        }
+                        else
+                        {
+                            //Console.WriteLine($"n{record.Id} - {distanceTagStr}");
+                        }
                     }
                 }
             }
@@ -54,20 +63,25 @@ namespace OsmPeregon
             var roadDictionary = new Dictionary<long, Road>(OSM_ROAD_COUNT);
             var wayDictionary = new Dictionary<long, Way>(OSM_WAY_COUNT);
 
-            foreach (var reader in o5mReader.SectionRelation)
+            foreach (var record in o5mReader.SectionRelation)
             {
-                if (reader.Contains(OsmConstants.KEY_TYPE, OsmConstants.KEY_ROUTE)
-                    && reader.Contains(OsmConstants.KEY_ROUTE, OsmConstants.TAG_ROAD))
+                if (record.Contains(OsmConstants.KEY_TYPE, OsmConstants.KEY_ROUTE)
+                    && record.Contains(OsmConstants.KEY_ROUTE, OsmConstants.TAG_ROAD))
                 {
                     var road = new Road(
-                        reader.Id,
-                        reader.GetTagValue(OsmConstants.KEY_REF),
-                        reader.GetTagValue(OsmConstants.KEY_NAME),
-                        reader.Members.Select(member => new Way(member.Id, member.Role))
+                        record.Id,
+                        record.GetTagValue(OsmConstants.KEY_REF),
+                        record.GetTagValue(OsmConstants.KEY_NAME),
+                        record.Members.Select(member =>
+                        {
+                            if (wayDictionary.TryGetValue(member.Id, out Way w))
+                                return w;
+                            return new Way(member.Id, member.Role);
+                        })
                     );
 
                     foreach (var way in road.Ways)
-                        wayDictionary.Add(way.Id, way);
+                        wayDictionary[way.Id] = way;
 
                     roadDictionary.Add(road.Id, road);
                 }
@@ -116,41 +130,55 @@ namespace OsmPeregon
                 lastNodeId = record.Id;
             }
 
+            long globalNewNodeId = (long)(lastNodeId / 100000.0) * 100000;
+            var newNodesMilestone = new List<FormatsOsm.WriteModel.Node>(OSM_NEW_MILESTONE_COUNT);
+
+            foreach (var road in roadDictionary.Values)
             {
-                var road = roadDictionary.Values.First();
+                int chainCount = road.CreateChainWays();
+                if (chainCount > 0)
+                {
+                    float shift = road.GetShiftMilestones(mailstoneDictionary);
+                    bool hasBaseMalestone = float.IsNaN(shift);
 
-                int gg = road.CreateChainWays();
-                float shift = road.GetShiftMilestones(mailstoneDictionary);
+                    if (float.IsNaN(shift))
+                    {
+                        shift = 0;
+                    }
 
-                var milestonesInter = road.GetMilestonesLinearInterpolate(shift);
-                string geojsonInterpolation = GeojsonGenerator.FromMilestones(milestonesInter);
-                //File.WriteAllText("interpolation.geojson", geojsonInterpolation);
+                    var milestonesInter = road.GetMilestonesLinearInterpolate(shift);
+                    //string geojsonInterpolation = GeojsonGenerator.FromMilestones(milestonesInter);
+                    //File.WriteAllText("interpolation.geojson", geojsonInterpolation);
 
-                var milestonesBase = road.GetMilestonesBaseOriginal(mailstoneDictionary);
-                string geojsonBaseMilestone = GeojsonGenerator.FromMilestones(milestonesBase);
-                //File.WriteAllText("interpolation-base-milestone.geojson", geojsonBaseMilestone);
+                    newNodesMilestone.AddRange(milestonesInter.Select(m => ToOsmNodeInterpolate(m, globalNewNodeId++)));
 
-                string geojsonOrigMilestone = GeojsonGenerator.FromMilestones(milestonesBase.Where(m => m.IsOriginal));
-                //File.WriteAllText("orig.geojson", geojsonOrigMilestone);
+                    if (hasBaseMalestone)
+                    {
+                        var milestonesBase = road.GetMilestonesBaseOriginal(mailstoneDictionary);
+                        //string geojsonBaseMilestone = GeojsonGenerator.FromMilestones(milestonesBase);
+                        //File.WriteAllText("interpolation-base-milestone.geojson", geojsonBaseMilestone);
 
-                long globalNewNodeId = (long)(lastNodeId / 100000.0) * 100000;
-                var newNodesInter = milestonesInter.Select(m => ToOsmNodeInterpolate(m, globalNewNodeId++));
+                        //string geojsonOrigMilestone = GeojsonGenerator.FromMilestones(milestonesBase.Where(m => m.IsOriginal));
+                        //File.WriteAllText("orig.geojson", geojsonOrigMilestone);
 
-                MilestonePoint prevMilestone = milestonesBase.First();
-                var newNodesBase = milestonesBase
-                        .GroupBy(m => m.Milestone)
-                        .SelectMany(m =>
-                            m.Any(m => m.IsOriginal) ? m.Where(m => m.IsOriginal) : m
-                        )
-                        .Select(m =>
-                        {
-                            var node = ToOsmNodeBase(m, prevMilestone, globalNewNodeId++);
-                            prevMilestone = m;
-                            return node;
-                        });
-
-                SaveOsmDumpWithGeneratedMilestones(o5mReader, newNodesInter.Concat(newNodesBase));
+                        MilestonePoint prevMilestone = milestonesBase.First();
+                        newNodesMilestone.AddRange(
+                            milestonesBase
+                                .GroupBy(m => m.Milestone)
+                                .SelectMany(m =>
+                                    m.Any(m => m.IsOriginal) ? m.Where(m => m.IsOriginal) : m
+                                )
+                                .Select(m =>
+                                {
+                                    var node = ToOsmNodeBase(m, prevMilestone, globalNewNodeId++);
+                                    prevMilestone = m;
+                                    return node;
+                                })
+                        );
+                    }
+                }
             }
+            SaveOsmDumpWithGeneratedMilestones(newNodesMilestone);
         }
 
         private static FormatsOsm.WriteModel.Node ToOsmNodeInterpolate(MilestonePoint milestone, long id)
@@ -172,56 +200,68 @@ namespace OsmPeregon
             return node;
         }
 
-        private static void SaveOsmDumpWithGeneratedMilestones(O5mStreamReader reader, IEnumerable<FormatsOsm.WriteModel.Node> nodes)
+        private static void SaveOsmDumpWithGeneratedMilestones(IEnumerable<FormatsOsm.WriteModel.Node> nodes)
         {
             using (var writer = new O5mStreamWriter("generated-milestones.o5m"))
             {
-                var node = new FormatsOsm.WriteModel.Node(0, 0, 0);
-                var way = new FormatsOsm.WriteModel.Way(0);
-                var rel = new FormatsOsm.WriteModel.Relation(0);
-
-                bool isNewMilestonesSaved = false;
-
-                foreach (var record in reader)
+                writer.WriteFileTimestamp(O5mHelper.DateTime2Timestamp(DateTime.UtcNow));
+                foreach (var milestoneNode in nodes)
                 {
-                    switch (record.Type)
-                    {
-                        case O5mHeaderSign.TimeStamp:
-                            writer.WriteFileTimestamp(record.Timestamp);
-                            break;
-
-                        case O5mHeaderSign.Bbox:
-                            int x1 = (int)record.GetRef(0);
-                            int y1 = (int)record.GetRef(1);
-                            int x2 = (int)record.GetRef(2);
-                            int y2 = (int)record.GetRef(3);
-
-                            writer.WriteBbox(x1, y1, x2, y2);
-                            break;
-
-                        case O5mHeaderSign.Node:
-                            node.Fill(record);
-                            writer.WriteNode(node);
-                            break;
-                        case O5mHeaderSign.Way:
-                            if (!isNewMilestonesSaved)
-                            {
-                                foreach (var milestoneNode in nodes)
-                                {
-                                    writer.WriteNode(milestoneNode);
-                                }
-                                isNewMilestonesSaved = true;
-                            }
-                            way.Fill(record);
-                            writer.WriteWay(way);
-                            break;
-                        case O5mHeaderSign.Relation:
-                            rel.Fill(record);
-                            writer.WriteRelation(rel);
-                            break;
-                    }
+                    writer.WriteNode(milestoneNode);
                 }
             }
         }
+
+        //private static void SaveOsmDumpWithGeneratedMilestones(O5mStreamReader reader, IEnumerable<FormatsOsm.WriteModel.Node> nodes)
+        //{
+        //    using (var writer = new O5mStreamWriter("generated-milestones.o5m"))
+        //    {
+        //        var node = new FormatsOsm.WriteModel.Node(0, 0, 0);
+        //        var way = new FormatsOsm.WriteModel.Way(0);
+        //        var rel = new FormatsOsm.WriteModel.Relation(0);
+
+        //        bool isNewMilestonesSaved = false;
+
+        //        foreach (var record in reader)
+        //        {
+        //            switch (record.Type)
+        //            {
+        //                case O5mHeaderSign.TimeStamp:
+        //                    writer.WriteFileTimestamp(record.Timestamp);
+        //                    break;
+
+        //                case O5mHeaderSign.Bbox:
+        //                    int x1 = (int)record.GetRef(0);
+        //                    int y1 = (int)record.GetRef(1);
+        //                    int x2 = (int)record.GetRef(2);
+        //                    int y2 = (int)record.GetRef(3);
+
+        //                    writer.WriteBbox(x1, y1, x2, y2);
+        //                    break;
+
+        //                case O5mHeaderSign.Node:
+        //                    node.Fill(record);
+        //                    writer.WriteNode(node);
+        //                    break;
+        //                case O5mHeaderSign.Way:
+        //                    if (!isNewMilestonesSaved)
+        //                    {
+        //                        foreach (var milestoneNode in nodes)
+        //                        {
+        //                            writer.WriteNode(milestoneNode);
+        //                        }
+        //                        isNewMilestonesSaved = true;
+        //                    }
+        //                    way.Fill(record);
+        //                    writer.WriteWay(way);
+        //                    break;
+        //                case O5mHeaderSign.Relation:
+        //                    rel.Fill(record);
+        //                    writer.WriteRelation(rel);
+        //                    break;
+        //            }
+        //        }
+        //    }
+        //}
     }
 }
