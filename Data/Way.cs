@@ -18,7 +18,9 @@ namespace OsmPeregon.Data
         public bool AllowReverse => DirectionRole == Direction.Both;
         public bool IsBackward => DirectionRole == Direction.Backward;
 
-        public ICollection<Edge> Edges => edges;
+        public ICollection<Edge> EdgesRaw => edges;
+
+        public IEnumerable<Edge> Edges => IsReverse ? EdgesRaw.Reverse() : EdgesRaw;
 
         public long FirstNodeRaw => edges.First().NodeStart;
         public long LastNodeRaw => edges.Last().NodeEnd;

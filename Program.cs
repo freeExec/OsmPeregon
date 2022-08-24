@@ -114,14 +114,23 @@ namespace OsmPeregon
                 }
             }
 
-            int gg = roadDictionary.Values.First().ReorderingWays();
-            float shift = roadDictionary.Values.First().GetShiftMilestones(mailstoneDictionary);
+            {
+                var road = roadDictionary.Values.First();
 
-            string geojsonInterpolation = roadDictionary.Values.First().GenerateGeoJsonFromLinearInterpolate(shift);
-            //File.WriteAllText("interpolation.geojson", geojsonInterpolation);
+                int gg = road.CreateChainWays();
+                float shift = road.GetShiftMilestones(mailstoneDictionary);
 
-            string geojsonBaseMilestone = roadDictionary.Values.First().GenerateGeoJsonFromBaseMilestone(mailstoneDictionary);
-            File.WriteAllText("interpolation-base-milestone.geojson", geojsonBaseMilestone);
+                var milestonesInter = road.GetMilestonesLinearInterpolate(shift);
+                string geojsonInterpolation = GeojsonGenerator.FromMilestones(milestonesInter);
+                File.WriteAllText("interpolation.geojson", geojsonInterpolation);
+
+                var milestonesBase = road.GetMilestonesBaseOriginal(mailstoneDictionary);
+                string geojsonBaseMilestone = GeojsonGenerator.FromMilestones(milestonesBase);
+                File.WriteAllText("interpolation-base-milestone.geojson", geojsonBaseMilestone);
+
+                string geojsonOrigMilestone = GeojsonGenerator.FromMilestones(milestonesBase.Where(m => m.IsOriginal));
+                File.WriteAllText("orig.geojson", geojsonOrigMilestone);
+            }
         }
     }
 }
