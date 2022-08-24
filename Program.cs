@@ -1,11 +1,12 @@
 ﻿#define LOCAL
 
 using System;
-using System.Linq;
 using System.Collections.Generic;
-using FormatsOsm;
-using OsmPeregon.Data;
 using System.IO;
+using System.Linq;
+using FormatsOsm;
+using FreeExec.Geom;
+using OsmPeregon.Data;
 
 namespace OsmPeregon
 {
@@ -106,9 +107,9 @@ namespace OsmPeregon
                     foreach (var edge in edges)
                     {
                         if (record.Id == edge.NodeStart)
-                            edge.Start = coord;
+                            edge.Start = new GeomPoint(coord);
                         if (record.Id == edge.NodeEnd)
-                            edge.End = coord;
+                            edge.End = new GeomPoint(coord);
                     }
                 }
             }

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FreeExec.Geom;
 using FreeExec.Tools;
 
 namespace OsmPeregon.Data
@@ -159,12 +160,10 @@ namespace OsmPeregon.Data
                         var shortLength = nextMilestone - lengthTotal;
                         float lineFactor = shortLength / length;
 
-                        int[] pos = edge.InterpolatePosition(way.IsReverse ? 1 - lineFactor : lineFactor);
-                        int posLon = pos[0];
-                        int posLat = pos[1];
+                        GeomPoint pos = edge.InterpolatePosition(way.IsReverse ? 1 - lineFactor : lineFactor);
 
                         sbGeojson.Append($"{{\"type\":\"Feature\",\"properties\":{{ \"label\":\"{nextMilestone}\"}},");
-                        sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{posLon * H3.GeoTools.FACTOR:F6},{posLat * H3.GeoTools.FACTOR:F6}]}}}}");
+                        sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{pos.Longitude:F6},{pos.Latitude:F6}]}}}}");
                         sbGeojson.AppendLine(",");
 
                         nextMilestone += 1;
@@ -183,23 +182,23 @@ namespace OsmPeregon.Data
         public string GenerateGeoJsonFromBaseMilestone(Dictionary<long, float> osmMilestones)
         {
 
-            Func<float, float, Edge, bool, bool, (float, int[], bool)> GetMilestone = (float milestone, float currentLength, Edge edge, bool isReverse, bool isOriginal) =>
+            Func<float, float, Edge, bool, bool, MilestonePoint> GetMilestone = (float milestone, float currentLength, Edge edge, bool isReverse, bool isOriginal) =>
             {
                 float length = edge.Length;
                 var shortLength = milestone - currentLength;
                 float lineFactor = shortLength / length;
-                int[] pos = edge.InterpolatePosition(isReverse ? 1 - lineFactor : lineFactor);
+                GeomPoint pos = edge.InterpolatePosition(isReverse ? 1 - lineFactor : lineFactor);
 
                 //sbGeojson.Append($"{{\"type\":\"Feature\",\"properties\":{{ \"label\":\"{milestone}\"}},");
                 //sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{pos[0] * H3.GeoTools.FACTOR:F6},{pos[1] * H3.GeoTools.FACTOR:F6}]}}}}");
                 //sbGeojson.AppendLine(",");
 
-                return new(milestone, pos, isOriginal);
+                return new MilestonePoint(milestone, pos, isOriginal);
             };
 
             float lengthTotal = 0;
             float nextMilestone = lengthTotal + 1;
-            var milestonePoints = new List<(float Milestone, int[] GeomPosition, bool isOriginal)>(chainForward.Count * 4)
+            var milestonePoints = new List<MilestonePoint>(chainForward.Count * 4)
             {
 
             };
@@ -215,9 +214,9 @@ namespace OsmPeregon.Data
                     {
                         var shortLength = nextMilestone - lengthTotal;
                         float lineFactor = shortLength / length;
-                        int[] pos = edge.InterpolatePosition(way.IsReverse ? 1 - lineFactor : lineFactor);
+                        GeomPoint pos = edge.InterpolatePosition(way.IsReverse ? 1 - lineFactor : lineFactor);
 
-                        milestonePoints.Add(new(nextMilestone, pos, false));
+                        milestonePoints.Add(new MilestonePoint(nextMilestone, pos, false));
 
                         nextMilestone += 1;
                     }
@@ -227,7 +226,7 @@ namespace OsmPeregon.Data
                     long lastNode = way.IsReverse ? edge.NodeStart : edge.NodeEnd;
                     if (osmMilestones.TryGetValue(lastNode, out float mile) && mile > 0)
                     {
-                        milestonePoints.Add(new(mile, way.IsReverse ? edge.Start : edge.End, true));
+                        milestonePoints.Add(new MilestonePoint(mile, way.IsReverse ? edge.Start : edge.End, true));
 
                         lengthTotal = mile;
                         nextMilestone = lengthTotal + 1;
@@ -238,18 +237,18 @@ namespace OsmPeregon.Data
             sbGeojson.Length = 0;
             sbGeojson.AppendLine("{\"type\": \"FeatureCollection\",\"features\": [");
 
-            (float Milestone, int[] GeomPosition, bool isOriginal) prevMilestone = default;
+            MilestonePoint prevMilestone = default;
 
             foreach (var milestoneCollect in milestonePoints.GroupBy(m => m.Milestone))
             {
-                var milestone = milestoneCollect.FirstOrDefault(m => m.isOriginal);
+                var milestone = milestoneCollect.FirstOrDefault(m => m.IsOriginal);
                 if (milestone == default)
                     milestone = milestoneCollect.First();
 
                 float distanceFromPrevMilestone = 1f - (float)H3.GeoTools.GeoDistKm(prevMilestone.GeomPosition, milestone.GeomPosition);
 
                 sbGeojson.Append($"{{\"type\":\"Feature\",\"properties\":{{ \"label\":\"{milestone.Milestone}\", \"delta\":{distanceFromPrevMilestone:F3}}},");
-                sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{milestone.GeomPosition[0] * H3.GeoTools.FACTOR:F6},{milestone.GeomPosition[1] * H3.GeoTools.FACTOR:F6}]}}}}");
+                sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{milestone.GeomPosition.Longitude:F6},{milestone.GeomPosition.Longitude:F6}]}}}}");
                 sbGeojson.AppendLine(",");
 
                 prevMilestone = milestone;
@@ -260,11 +259,18 @@ namespace OsmPeregon.Data
             return sbGeojson.ToString();
         }
 
-        private struct MilestonePoint
+        private class MilestonePoint
         {
             public float Milestone;
-            public int[] GeomPosition;
+            public GeomPoint GeomPosition;
             public bool IsOriginal;
+
+            public MilestonePoint(float mile, GeomPoint geom, bool isOriginal)
+            {
+                Milestone = mile;
+                GeomPosition = geom;
+                IsOriginal = isOriginal;
+            }
         }
     }
 }

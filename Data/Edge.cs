@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FreeExec.Geom;
 using H3;
 
 namespace OsmPeregon.Data
 {
     public record Edge
     {
-        public int[] Start;
-        public int[] End;
+        public GeomPoint Start;
+        public GeomPoint End;
 
         public readonly long NodeStart;
         public readonly long NodeEnd;
@@ -32,13 +33,6 @@ namespace OsmPeregon.Data
             NodeEnd = end;
         }
 
-        public int[] InterpolatePosition(float lineFactor)
-        {
-            return new int[]
-            {
-                Start[0] + (int)((End[0] - Start[0]) * lineFactor),
-                Start[1] + (int)((End[1] - Start[1]) * lineFactor)
-            };
-        }
+        public GeomPoint InterpolatePosition(float lineFactor) => Start + (End - Start) * lineFactor;
     }
 }

@@ -16,6 +16,7 @@
  */
 
 using System;
+using FreeExec.Geom;
 
 namespace H3
 {
@@ -110,6 +111,20 @@ namespace H3
         public static double GeoDistKm(int[] p1, int[] p2)
         {
             return EARTH_RADIUS_KM * GeoDistRads(p1, p2);
+        }
+
+        /// <summary>
+        /// Find the great circle distance in kilometers between two spherical
+        /// coordinates.
+        /// </summary>
+        /// <param name="p2">The second spherical coordinates.</param>
+        /// <returns>The distance in kilometers between p1 and p2.</returns>
+        public static double GeoDistKm(GeomPoint p1, GeomPoint p2)
+        {
+            return EARTH_RADIUS_KM * GeoDistRads(
+                DegsToRads(p1.Longitude), DegsToRads(p1.Latitude),
+                DegsToRads(p2.Longitude), DegsToRads(p2.Latitude)
+            );
         }
     }
 }
