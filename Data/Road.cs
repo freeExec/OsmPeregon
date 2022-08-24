@@ -237,9 +237,9 @@ namespace OsmPeregon.Data
             sbGeojson.Length = 0;
             sbGeojson.AppendLine("{\"type\": \"FeatureCollection\",\"features\": [");
 
-            MilestonePoint prevMilestone = default;
+            MilestonePoint prevMilestone = milestonePoints.First();
 
-            foreach (var milestoneCollect in milestonePoints.GroupBy(m => m.Milestone))
+            foreach (var milestoneCollect in milestonePoints.GroupBy(m => m.Milestone).OrderBy(m => m.Key))
             {
                 var milestone = milestoneCollect.FirstOrDefault(m => m.IsOriginal);
                 if (milestone == default)
@@ -248,7 +248,7 @@ namespace OsmPeregon.Data
                 float distanceFromPrevMilestone = 1f - (float)H3.GeoTools.GeoDistKm(prevMilestone.GeomPosition, milestone.GeomPosition);
 
                 sbGeojson.Append($"{{\"type\":\"Feature\",\"properties\":{{ \"label\":\"{milestone.Milestone}\", \"delta\":{distanceFromPrevMilestone:F3}}},");
-                sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{milestone.GeomPosition.Longitude:F6},{milestone.GeomPosition.Longitude:F6}]}}}}");
+                sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{milestone.GeomPosition.Longitude:F6},{milestone.GeomPosition.Latitude:F6}]}}}}");
                 sbGeojson.AppendLine(",");
 
                 prevMilestone = milestone;
