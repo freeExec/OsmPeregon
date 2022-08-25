@@ -14,8 +14,8 @@ namespace OsmPeregon
 
         public static string FromMilestones(IEnumerable<MilestonePoint> milestonePoints)
         {
-            sbGeojson.Length = 0;
-            sbGeojson.AppendLine("{\"type\": \"FeatureCollection\",\"features\": [");
+            InternalGeojsonPreambule();
+            var props = new Dictionary<string, object>();
 
             MilestonePoint prevMilestone = milestonePoints.First();
 
@@ -27,33 +27,58 @@ namespace OsmPeregon
 
                 float distanceFromPrevMilestone = 1f - (float)H3.GeoTools.GeoDistKm(prevMilestone.GeomPosition, milestone.GeomPosition);
 
-                sbGeojson.Append($"{{\"type\":\"Feature\",\"properties\":{{ \"label\":\"{milestone.Milestone}\", \"delta\":{distanceFromPrevMilestone:F3}}},");
-                sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{milestone.GeomPosition.Longitude:F6},{milestone.GeomPosition.Latitude:F6}]}}}}");
-                sbGeojson.AppendLine(",");
+                props["label"] = milestone.Milestone.ToString();
+                props["delta"] = distanceFromPrevMilestone.ToString("F3");
+                AddPoint(milestone.GeomPosition, props);
 
                 prevMilestone = milestone;
             }
 
-            sbGeojson.Length -= Environment.NewLine.Length + 1;
-            sbGeojson.AppendLine("]}");
+            InternalGeojsonConclusion();
             return sbGeojson.ToString();
         }
 
         public static string FromNodeIds(IEnumerable<(long id, GeomPoint geom, string value)> badMilestones)
         {
-            sbGeojson.Length = 0;
-            sbGeojson.AppendLine("{\"type\": \"FeatureCollection\",\"features\": [");
-
+            InternalGeojsonPreambule();
+            var props = new Dictionary<string, object>();
             foreach (var node in badMilestones)
             {
-                sbGeojson.Append($"{{\"type\":\"Feature\",\"properties\":{{\"name\":\"{node.value}\",\"osmid\":{node.id}}},");
-                sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{node.geom.Longitude:F6},{node.geom.Latitude:F6}]}}}}");
-                sbGeojson.AppendLine(",");
+                props["name"] = node.value;
+                props["osmid"] = node.id;
+                AddPoint(node.geom, props);
             }
+            InternalGeojsonConclusion();
+            return sbGeojson.ToString();
+        }
 
+        private static void AddPoint(GeomPoint geom, IEnumerable<KeyValuePair<string, object>> props)
+        {
+            sbGeojson.Append("{\"type\":\"Feature\",\"properties\":{");
+            foreach (var pr in props)
+            {
+                if (pr.Value is string)
+                    sbGeojson.Append($"\"{pr.Key}\":\"{pr.Value}\",");
+                else if (pr.Value is long || pr.Value is int || pr.Value is float)
+                    sbGeojson.Append($"\"{pr.Key}\":{pr.Value},");
+            }
+            sbGeojson.Length--;
+            sbGeojson.Append("},");
+            sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{geom.Longitude:F6},{geom.Latitude:F6}]}}}}");
+            sbGeojson.AppendLine(",");
+        }
+
+        private static void InternalGeojsonPreambule()
+        {
+            sbGeojson.Length = 0;
+            sbGeojson.AppendLine("{\"type\": \"FeatureCollection\",\"features\": [");
+        }
+
+        private static void InternalGeojsonConclusion()
+        {
             sbGeojson.Length -= Environment.NewLine.Length + 1;
             sbGeojson.AppendLine("]}");
-            return sbGeojson.ToString();
+
         }
     }
 }
