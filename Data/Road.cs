@@ -84,7 +84,7 @@ namespace OsmPeregon.Data
             return (chainForward.Count, nouse.Count);
         }
 
-        public bool CalculationStatisticsAndMatchMilestones(Dictionary<long, float> osmMilestones, bool forceExit = false)
+        public float CalculationStatisticsAndMatchMilestones(Dictionary<long, float> osmMilestones, bool forceExit = false)
         {
             float length = 0f;
             errorsMilestonesDistance = new Dictionary<long, MilestoneMatch>();
@@ -121,7 +121,7 @@ namespace OsmPeregon.Data
             }
             catch (ArgumentException)
             {
-                return false;
+                return 0f;
             }
 
             if (nextLess > nextMore)
@@ -147,10 +147,10 @@ namespace OsmPeregon.Data
 
                     statStartMilestone = errorsMilestonesDistance.Values.Where(e => !e.IsBad).Average(e => e.Error);
                 }
-                return true;
+                return length;
             }
 
-            return false;
+            return 0;
         }
 
         public List<MilestonePoint> GetMilestonesLinearInterpolate()

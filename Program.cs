@@ -1,4 +1,5 @@
 ﻿//#define LOCAL
+//#define DETAIL_ROAD_GEN_LOG
 
 using System;
 using System.Collections.Generic;
@@ -39,8 +40,10 @@ namespace OsmPeregon
             //var o5mSource = "relation-ural-ulyanovsk.o5m";
             //var o5mSource = "R-178.o5m";
             o5mSource = "M-8.o5m";
-#endif
             //var o5mSource = "test-road.o5m";
+#endif
+
+            var statsInfo = new StatInfo();
             var o5mReader = new O5mStreamReader(o5mSource);
 
             int columnInfoPosForProgress = 0;
@@ -73,6 +76,8 @@ namespace OsmPeregon
                 }
             }
             Console.WriteLine("OK");
+
+            statsInfo.RoadTotal = roads.Count;
 
             Console.Write("Collecting edges ... ");
             columnInfoPosForProgress = Console.CursorLeft;
@@ -178,6 +183,9 @@ namespace OsmPeregon
 
             o5mReader.Close();
 
+            statsInfo.Milestones = milestoneDictionary.Count;
+            statsInfo.BadMilestones = badMilestones.Count;
+
             //var geojsonBadMelistones = GeojsonGenerator.FromNodeIds(badMilestones);
             //File.WriteAllText("bad-melistones-maproulette.geojson", geojsonBadMelistones);
 
@@ -188,20 +196,29 @@ namespace OsmPeregon
             {
                 if (road.Ways.Count == 0)
                 {
+                    statsInfo.RoadEmpty++;
+#if DETAIL_ROAD_GEN_LOG
                     Console.WriteLine($"Skip road (empty): {road}");
+#endif
                     continue;
                 }
 
                 if (!road.IsCorrect)
                 {
+#if DETAIL_ROAD_GEN_LOG
                     Console.WriteLine($"Skip road (incorrect): {road}");
+#endif
                     continue;
                 }
+                statsInfo.RoadCorrect++;
 
                 (int chainCount, int noUse) = road.CreateChainWays();
+                statsInfo.NoUseWays += noUse;
                 if (chainCount > 0)
                 {
-                    bool hasBaseMalestone = road.CalculationStatisticsAndMatchMilestones(milestoneDictionary);
+                    float length = road.CalculationStatisticsAndMatchMilestones(milestoneDictionary);
+                    statsInfo.TotalLength += length;
+                    bool hasBaseMalestone = length > 0;
                     var milestonesInter = road.GetMilestonesLinearInterpolate();
                     //string geojsonInterpolation = GeojsonGenerator.FromMilestones(milestonesInter);
                     //File.WriteAllText("interpolation.geojson", geojsonInterpolation);
@@ -236,13 +253,20 @@ namespace OsmPeregon
                                     return node;
                                 })
                         );
+
+                        statsInfo.RoadWithMilestones++;
                     }
+#if DETAIL_ROAD_GEN_LOG
                     Console.WriteLine($"Generate C:{chainCount}, N:{noUse} I{(hasBaseMalestone ? "B" : "")}: {road}");
+#endif
                 }
+#if DETAIL_ROAD_GEN_LOG
                 else
                     Console.WriteLine($"Skip road (no chains) N:{noUse} : {road}");
+#endif
             }
             SaveOsmDumpWithGeneratedMilestones(newNodesMilestone);
+            PrintStats(statsInfo);
         }
 
         private static FormatsOsm.WriteModel.Node ToOsmNodeInterpolate(MilestonePoint milestone, long id)
@@ -276,56 +300,31 @@ namespace OsmPeregon
             }
         }
 
-        //private static void SaveOsmDumpWithGeneratedMilestones(O5mStreamReader reader, IEnumerable<FormatsOsm.WriteModel.Node> nodes)
-        //{
-        //    using (var writer = new O5mStreamWriter("generated-milestones.o5m"))
-        //    {
-        //        var node = new FormatsOsm.WriteModel.Node(0, 0, 0);
-        //        var way = new FormatsOsm.WriteModel.Way(0);
-        //        var rel = new FormatsOsm.WriteModel.Relation(0);
+        private static void PrintStats(StatInfo stats)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"RoadTotal: {stats.RoadTotal}");
+            Console.WriteLine($"RoadEmpty: {stats.RoadEmpty}");
+            Console.WriteLine($"RoadCorrect: {stats.RoadCorrect}");
+            Console.WriteLine($"RoadWithMilestones: {stats.RoadWithMilestones}");
+            Console.WriteLine($"NoUseWays: {stats.NoUseWays}");
+            Console.WriteLine($"Milestones: {stats.Milestones}");
+            Console.WriteLine($"BadMilestones: {stats.BadMilestones}");
+            Console.WriteLine($"TotalLength: {stats.TotalLength}");
+        }
 
-        //        bool isNewMilestonesSaved = false;
+        private class StatInfo
+        {
+            public int RoadTotal;
+            public int RoadEmpty;
+            public int RoadCorrect;
+            public int RoadWithMilestones;
 
-        //        foreach (var record in reader)
-        //        {
-        //            switch (record.Type)
-        //            {
-        //                case O5mHeaderSign.TimeStamp:
-        //                    writer.WriteFileTimestamp(record.Timestamp);
-        //                    break;
+            public int NoUseWays;
+            public int Milestones;
+            public int BadMilestones;
 
-        //                case O5mHeaderSign.Bbox:
-        //                    int x1 = (int)record.GetRef(0);
-        //                    int y1 = (int)record.GetRef(1);
-        //                    int x2 = (int)record.GetRef(2);
-        //                    int y2 = (int)record.GetRef(3);
-
-        //                    writer.WriteBbox(x1, y1, x2, y2);
-        //                    break;
-
-        //                case O5mHeaderSign.Node:
-        //                    node.Fill(record);
-        //                    writer.WriteNode(node);
-        //                    break;
-        //                case O5mHeaderSign.Way:
-        //                    if (!isNewMilestonesSaved)
-        //                    {
-        //                        foreach (var milestoneNode in nodes)
-        //                        {
-        //                            writer.WriteNode(milestoneNode);
-        //                        }
-        //                        isNewMilestonesSaved = true;
-        //                    }
-        //                    way.Fill(record);
-        //                    writer.WriteWay(way);
-        //                    break;
-        //                case O5mHeaderSign.Relation:
-        //                    rel.Fill(record);
-        //                    writer.WriteRelation(rel);
-        //                    break;
-        //            }
-        //        }
-        //    }
-        //}
+            public double TotalLength;
+        }
     }
 }
