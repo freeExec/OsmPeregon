@@ -21,6 +21,8 @@ namespace OsmPeregon.Data
         private float outlierMin;
         private float outlierMax;
 
+        private List<MilestoneMatch> errorsMilestonesDistance;
+
         public readonly long Id;
         public readonly string Ref;
         public readonly string Name;
@@ -77,25 +79,19 @@ namespace OsmPeregon.Data
                     var last = candidatWay.LastNode;
                     candidatList = mapEdge[last];
                 }
-
-                if (lastWay.Id == 226280382L)
-                {
-                    int gg = 99;
-                }
-
             } while (candidatWay != null);
 
             var nouse = mapEdge.Where(l => l.Any(w => w.OrderStatus != OrderStatus.Reserve)).ToList();
             return chainForward.Count;
         }
 
-        public void CalculationStatistics(Dictionary<long, float> osmMilestones, bool forceExit = false)
+        public bool CalculationStatisticsAndMatchMilestones(Dictionary<long, float> osmMilestones, bool forceExit = false)
         {
             float length = 0f;
-            var errors = new List<float>();
+            errorsMilestonesDistance = new List<MilestoneMatch>();
             float lastMile = 0;
             float lastLength = 0;
-            
+
             int nextLess = 0;
             int nextMore = 0;
             foreach (var way in chainForward)
@@ -114,7 +110,7 @@ namespace OsmPeregon.Data
                         else
                             nextLess++;
 
-                        errors.Add(mile - length);
+                        errorsMilestonesDistance.Add(new MilestoneMatch(mile, length));
                         lastMile = mile;
                     }
                     lastLength = length;
@@ -123,73 +119,36 @@ namespace OsmPeregon.Data
 
             if (nextLess > nextMore)
             {
+                if (forceExit)
+                    throw new NotSupportedException();
+
                 chainForward.Reverse();
                 chainForward.ForEach(c => c.ReverseDirection());
 
-                CalculationStatistics(osmMilestones, true);
-                return;
+                return CalculationStatisticsAndMatchMilestones(osmMilestones, true);
             }
 
-            statStartMilestone = errors.Average();
-            (outlierMin, outlierMax) = Outlier.GetOutlierBoundary(errors, true);
-            statStartMilestone = errors.Where(e => e > outlierMin && e < outlierMax).Average();
+            if (errorsMilestonesDistance.Count > 0)
+            {
+
+                statStartMilestone = errorsMilestonesDistance.Average(e => e.Error);
+
+                (outlierMin, outlierMax) = Outlier.GetOutlierBoundary(errorsMilestonesDistance.Select(e => e.Error), true);
+                foreach (var badMilestone in errorsMilestonesDistance.Where(e => e.Error <= outlierMin || e.Error >= outlierMax))
+                    badMilestone.IsBad = true;
+
+                statStartMilestone = errorsMilestonesDistance.Where(e => !e.IsBad).Average(e => e.Error);
+
+                return true;
+            }
+
+            return false;
         }
 
-        public float GetShiftMilestones(Dictionary<long, float> osmMilestones, bool forceExit = false)
+        public List<MilestonePoint> GetMilestonesLinearInterpolate()
         {
-            float length = 0f;
-            //var deltas = new List<MatchMilestone>();
-            var errors = new List<float>();
-            float lastMile = 0;
-            float lastLength = 0;
-            foreach (var way in chainForward)
-            {
-                foreach (var edge in (way.Edges))
-                {
-                    float mile = 0;
-
-                    long lastNode = way.IsReverse ? edge.NodeStart : edge.NodeEnd;
-
-                    length += edge.Length;
-                    if (osmMilestones.TryGetValue(lastNode, out mile) && mile > 0)
-                    {
-                        //Console.WriteLine($"{mile:000} \t {length:F2} \t {mile - length:F2} \t {(length - lastLength)/(mile - lastMile):F2}");
-                        //deltas.Add(new MatchMilestone(mile, length));
-                        errors.Add(mile - length);
-
-                        lastMile = mile;
-                    }
-                    lastLength = length;
-                }
-            }
-
-            //var avg = deltas.Average(mm => mm.OriginalDistance - mm.RealDistance);
-            //var std = deltas.Std(mm => mm.OriginalDistance - mm.RealDistance);
-
-            if (errors.Count > 0)
-            {
-                var avg = errors.Average();
-                var std = errors.Std();
-                if (std > 100)
-                {
-                    chainForward.Reverse();
-                    chainForward.ForEach(c => c.ReverseDirection());
-
-                    if (forceExit)
-                        return float.NaN;
-
-                    return GetShiftMilestones(osmMilestones, true);
-                }
-                return avg;
-            }
-
-            return float.NaN;
-        }
-
-        public List<MilestonePoint> GetMilestonesLinearInterpolate(float startShift)
-        {
-            float lengthTotal = startShift;
-            float nextMilestone = MathF.Floor(startShift + MILESTONE_STEP_KM);
+            float lengthTotal = statStartMilestone;
+            float nextMilestone = MathF.Floor(statStartMilestone + MILESTONE_STEP_KM);
 
             var firstWay = chainForward.First();
             var firstEdge = firstWay.Edges.First();
@@ -222,15 +181,15 @@ namespace OsmPeregon.Data
             return milestonePoints;
         }
 
-        public List<MilestonePointToInsertOsm> GetMilestonesBaseOriginal(Dictionary<long, float> osmMilestones)
+        public List<MilestonePoint> GetMilestonesBaseOriginal(Dictionary<long, float> osmMilestones)
         {
-            Func<float, float, Edge, bool, bool, MilestonePointToInsertOsm> GetMilestone = (float milestone, float currentLength, Edge edge, bool isReverse, bool isOriginal) =>
+            Func<float, float, Edge, bool, bool, MilestonePoint> GetMilestone = (float milestone, float currentLength, Edge edge, bool isReverse, bool isOriginal) =>
             {
                 float length = edge.Length;
                 var shortLength = milestone - currentLength;
                 float lineFactor = shortLength / length;
                 GeomPoint pos = edge.InterpolatePosition(isReverse ? 1 - lineFactor : lineFactor);
-                return new MilestonePointToInsertOsm(milestone, pos, isOriginal);
+                return new MilestonePoint(milestone, pos, isOriginal);
             };
 
             float lengthTotal = 0;
@@ -239,13 +198,9 @@ namespace OsmPeregon.Data
             var firstWay = chainForward.First();
             var firstEdge = firstWay.Edges.First();
             var firstPoint = firstEdge.InterpolatePosition(firstWay.IsReverse ? 1 : 0);
-            var milestonePoints = new List<MilestonePointToInsertOsm>(chainForward.Count * 20)
+            var milestonePoints = new List<MilestonePoint>(chainForward.Count * 20)
             {
-                new MilestonePointToInsertOsm(lengthTotal, firstPoint, false)
-                {
-                    Way = firstWay,
-                    Edge = firstEdge
-                }
+                new MilestonePoint(lengthTotal, firstPoint, false)
             };
 
             foreach (var way in chainForward)
@@ -260,11 +215,7 @@ namespace OsmPeregon.Data
                         float lineFactor = shortLength / length;
                         GeomPoint pos = edge.InterpolatePosition(way.IsReverse ? 1 - lineFactor : lineFactor);
 
-                        milestonePoints.Add(new MilestonePointToInsertOsm(nextMilestone, pos, false)
-                        {
-                            Way = way,
-                            Edge = edge
-                        });
+                        milestonePoints.Add(new MilestonePoint(nextMilestone, pos, false));
 
                         nextMilestone += MILESTONE_STEP_KM;
                     }
@@ -274,7 +225,7 @@ namespace OsmPeregon.Data
                     long lastNode = way.IsReverse ? edge.NodeStart : edge.NodeEnd;
                     if (osmMilestones.TryGetValue(lastNode, out float mile) && mile > 0)
                     {
-                        milestonePoints.Add(new MilestonePointToInsertOsm(mile, way.IsReverse ? edge.Start : edge.End, true));
+                        milestonePoints.Add(new MilestonePoint(mile, way.IsReverse ? edge.Start : edge.End, true));
 
                         lengthTotal = mile;
                         nextMilestone = lengthTotal + MILESTONE_STEP_KM;
@@ -284,17 +235,5 @@ namespace OsmPeregon.Data
 
             return milestonePoints;
         }
-
-        //private class MatchMilestone
-        //{
-        //    public float OriginalDistance;
-        //    public float RealDistance;
-
-        //    public MatchMilestone(float orig, float real)
-        //    {
-        //        OriginalDistance = orig;
-        //        RealDistance = real;
-        //    }
-        //}
     }
 }

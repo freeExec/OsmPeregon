@@ -32,9 +32,12 @@ namespace OsmPeregon
 
             //var o5mSource = @"d:\frex\Test\OSM\RU_local\highway_road.o5m";
             //var o5mSource = @"i:\MyWorkProg\Map_Gis\Styles\Highway\highway-local-RU.o5m";
+            var o5mSource = @"d:\frex\Test\OSM\RU_local\maxspeed\highway-road-local-RU.o5m";
+#if LOCAL
             //var o5mSource = "relation-ural-ulyanovsk.o5m";
             //var o5mSource = "R-178.o5m";
-            var o5mSource = "M-8.o5m";
+            o5mSource = "M-8.o5m";
+#endif
             //var o5mSource = "test-road.o5m";
             var o5mReader = new O5mStreamReader(o5mSource);
 
@@ -146,17 +149,8 @@ namespace OsmPeregon
                 int chainCount = road.CreateChainWays();
                 if (chainCount > 0)
                 {
-                    road.CalculationStatistics(milestoneDictionary);
-
-                    float shift = road.GetShiftMilestones(milestoneDictionary);
-                    bool hasBaseMalestone = !float.IsNaN(shift);
-
-                    if (float.IsNaN(shift))
-                    {
-                        shift = 0;
-                    }
-
-                    var milestonesInter = road.GetMilestonesLinearInterpolate(shift);
+                    bool hasBaseMalestone = road.CalculationStatisticsAndMatchMilestones(milestoneDictionary);
+                    var milestonesInter = road.GetMilestonesLinearInterpolate();
                     //string geojsonInterpolation = GeojsonGenerator.FromMilestones(milestonesInter);
                     //File.WriteAllText("interpolation.geojson", geojsonInterpolation);
 

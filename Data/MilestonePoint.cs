@@ -16,16 +16,18 @@ namespace OsmPeregon.Data
         }
     }
 
-    public class MilestonePointToInsertOsm : MilestonePoint
+    public class MilestoneMatch
     {
-        public Way Way;
-        public Edge Edge;
-        public long OsmId;
+        public float OriginalDistance;
+        public float RealDistance;
+        public bool IsBad;
 
-        public MilestonePointToInsertOsm(float mile, GeomPoint geom, bool isOriginal)
-            : base(mile, geom, isOriginal)
+        public float Error => OriginalDistance - RealDistance;
+
+        public MilestoneMatch(float orig, float real)
         {
-
+            OriginalDistance = orig;
+            RealDistance = real;
         }
     }
 }

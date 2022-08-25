@@ -60,17 +60,18 @@ namespace FreeExec.Geom
         public int[] GetArray() => new int[] { LongitudeI, LatitudeI };
 
         public static GeomPoint operator +(GeomPoint p1, GeomPoint p2)
-            => new GeomPoint(p1.LongitudeI + p2.LongitudeI, p1.LatitudeI + p2.LatitudeI);        
+            => new GeomPoint(p1.LongitudeI + p2.LongitudeI, p1.LatitudeI + p2.LatitudeI);
 
         public static GeomPoint operator -(GeomPoint p1, GeomPoint p2)
-            => new GeomPoint(p1.LongitudeI - p2.LongitudeI, p1.LatitudeI - p2.LatitudeI);        
+            => new GeomPoint(p1.LongitudeI - p2.LongitudeI, p1.LatitudeI - p2.LatitudeI);
 
         public static GeomPoint operator *(GeomPoint p1, float scale)
             => new GeomPoint((int)(p1.LongitudeI * scale), (int)(p1.LatitudeI * scale));
 
-        public static bool operator ==(GeomPoint p1, GeomPoint p2) 
+        public static bool operator ==(GeomPoint p1, GeomPoint p2)
             => p1.LongitudeI == p2.LongitudeI && p1.LatitudeI == p2.LatitudeI;
-        public static bool operator !=(GeomPoint p1, GeomPoint p2) 
+
+        public static bool operator !=(GeomPoint p1, GeomPoint p2)
             => !(p1 == p2);
 
         public override bool Equals(object obj)
@@ -84,6 +85,11 @@ namespace FreeExec.Geom
         public override string ToString()
         {
             return $"{Longitude},{Latitude}";
+        }
+
+        public override int GetHashCode()
+        {
+            return LongitudeI.GetHashCode() ^ LatitudeI.GetHashCode();
         }
     }
 }
