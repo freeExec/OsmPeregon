@@ -21,7 +21,7 @@ namespace OsmPeregon.Data
         private float outlierMin;
         private float outlierMax;
 
-        private List<MilestoneMatch> errorsMilestonesDistance;
+        private Dictionary<long, MilestoneMatch> errorsMilestonesDistance;
 
         public readonly long Id;
         public readonly string Ref;
@@ -88,7 +88,7 @@ namespace OsmPeregon.Data
         public bool CalculationStatisticsAndMatchMilestones(Dictionary<long, float> osmMilestones, bool forceExit = false)
         {
             float length = 0f;
-            errorsMilestonesDistance = new List<MilestoneMatch>();
+            errorsMilestonesDistance = new Dictionary<long, MilestoneMatch>();
             float lastMile = 0;
             float lastLength = 0;
 
@@ -110,7 +110,7 @@ namespace OsmPeregon.Data
                         else
                             nextLess++;
 
-                        errorsMilestonesDistance.Add(new MilestoneMatch(mile, length));
+                        errorsMilestonesDistance.Add(lastNode, new MilestoneMatch(mile, length));
                         lastMile = mile;
                     }
                     lastLength = length;
@@ -130,14 +130,13 @@ namespace OsmPeregon.Data
 
             if (errorsMilestonesDistance.Count > 0)
             {
+                statStartMilestone = errorsMilestonesDistance.Values.Average(e => e.Error);
 
-                statStartMilestone = errorsMilestonesDistance.Average(e => e.Error);
-
-                (outlierMin, outlierMax) = Outlier.GetOutlierBoundary(errorsMilestonesDistance.Select(e => e.Error), true);
-                foreach (var badMilestone in errorsMilestonesDistance.Where(e => e.Error <= outlierMin || e.Error >= outlierMax))
+                (outlierMin, outlierMax) = Outlier.GetOutlierBoundary(errorsMilestonesDistance.Values.Select(e => e.Error), true);
+                foreach (var badMilestone in errorsMilestonesDistance.Values.Where(e => e.Error <= outlierMin || e.Error >= outlierMax))
                     badMilestone.IsBad = true;
 
-                statStartMilestone = errorsMilestonesDistance.Where(e => !e.IsBad).Average(e => e.Error);
+                statStartMilestone = errorsMilestonesDistance.Values.Where(e => !e.IsBad).Average(e => e.Error);
 
                 return true;
             }
@@ -225,10 +224,14 @@ namespace OsmPeregon.Data
                     long lastNode = way.IsReverse ? edge.NodeStart : edge.NodeEnd;
                     if (osmMilestones.TryGetValue(lastNode, out float mile) && mile > 0)
                     {
-                        milestonePoints.Add(new MilestonePoint(mile, way.IsReverse ? edge.Start : edge.End, true));
+                        var milestoneMath = errorsMilestonesDistance[lastNode];
+                        if (!milestoneMath.IsBad)
+                        {
+                            milestonePoints.Add(new MilestonePoint(mile, way.IsReverse ? edge.Start : edge.End, true));
 
-                        lengthTotal = mile;
-                        nextMilestone = lengthTotal + MILESTONE_STEP_KM;
+                            lengthTotal = mile;
+                            nextMilestone = lengthTotal + MILESTONE_STEP_KM;
+                        }
                     }
                 }
             }

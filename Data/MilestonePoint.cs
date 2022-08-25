@@ -14,6 +14,11 @@ namespace OsmPeregon.Data
             GeomPosition = geom;
             IsOriginal = isOriginal;
         }
+
+        public override string ToString()
+        {
+            return $"{Milestone} {(IsOriginal ? "o" : "")}";
+        }
     }
 
     public class MilestoneMatch
@@ -28,6 +33,11 @@ namespace OsmPeregon.Data
         {
             OriginalDistance = orig;
             RealDistance = real;
+        }
+
+        public override string ToString()
+        {
+            return $"{OriginalDistance} ({Error}) {(IsBad ? "X" : "")}";
         }
     }
 }

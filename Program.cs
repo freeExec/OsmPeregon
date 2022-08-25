@@ -53,6 +53,7 @@ namespace OsmPeregon
 
                     if (!string.IsNullOrEmpty(distanceTagStr))
                     {
+                        distanceTagStr = distanceTagStr.Replace("km", string.Empty).Replace("км", string.Empty).TrimEnd();
                         if (float.TryParse(distanceTagStr, out float distanceTag))
                         {
                             milestoneDictionary.Add(record.Id, distanceTag);
