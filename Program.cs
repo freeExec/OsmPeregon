@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 using FormatsOsm;
 using FreeExec.Geom;
 using OsmPeregon.Data;
@@ -33,15 +35,24 @@ namespace OsmPeregon
         {
             System.Threading.Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
 
-            //var o5mSource = @"d:\frex\Test\OSM\RU_local\highway_road.o5m";
-            //var o5mSource = @"i:\MyWorkProg\Map_Gis\Styles\Highway\highway-local-RU.o5m";
-            var o5mSource = @"d:\frex\Test\OSM\RU_local\maxspeed\highway-road-local-RU.o5m";
-#if LOCAL
-            //var o5mSource = "relation-ural-ulyanovsk.o5m";
-            //var o5mSource = "R-178.o5m";
-            o5mSource = "M-8.o5m";
-            //var o5mSource = "test-road.o5m";
-#endif
+            var name = Assembly.GetExecutingAssembly().GetName().Name;
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            var about = $"{name} (c) freeExec 2022 v{version.Major}.{version.Minor}.{version.Build}";
+            Console.WriteLine(about);
+
+            var token = new ConsoleTokenizer(args);
+
+            if (token.Files.Count < 1)
+            {
+                Console.WriteLine($"Usage: {name}.exe [options] highway.o5m");
+                Console.WriteLine("\t-l");
+                Console.WriteLine("\t\t<log file>");
+                Console.WriteLine();
+
+                return;
+            }
+
+            var o5mSource = token.Files[0];
 
             var statsInfo = new StatInfo();
             var o5mReader = new O5mStreamReader(o5mSource);
@@ -223,11 +234,6 @@ namespace OsmPeregon
                     //string geojsonInterpolation = GeojsonGenerator.FromMilestones(milestonesInter);
                     //File.WriteAllText("interpolation.geojson", geojsonInterpolation);
 
-                    if (milestonesInter.Count > 1000)
-                    {
-                        int gg = 99;
-                    }
-
                     newNodesMilestone.AddRange(milestonesInter.Select(m => ToOsmNodeInterpolate(m, globalNewNodeId++)));
 
                     if (hasBaseMalestone)
@@ -266,7 +272,8 @@ namespace OsmPeregon
 #endif
             }
             SaveOsmDumpWithGeneratedMilestones(newNodesMilestone);
-            PrintStats(statsInfo);
+
+            PrintStats(statsInfo, token["l"]);
         }
 
         private static FormatsOsm.WriteModel.Node ToOsmNodeInterpolate(MilestonePoint milestone, long id)
@@ -300,17 +307,25 @@ namespace OsmPeregon
             }
         }
 
-        private static void PrintStats(StatInfo stats)
+        private static void PrintStats(StatInfo stats, string logFilePath)
         {
+            var sb = new StringBuilder(4096);
+            sb.AppendLine($"RoadTotal: {stats.RoadTotal}");
+            sb.AppendLine($"RoadEmpty: {stats.RoadEmpty}");
+            sb.AppendLine($"RoadCorrect: {stats.RoadCorrect}");
+            sb.AppendLine($"RoadWithMilestones: {stats.RoadWithMilestones}");
+            sb.AppendLine($"NoUseWays: {stats.NoUseWays}");
+            sb.AppendLine($"Milestones: {stats.Milestones}");
+            sb.AppendLine($"BadMilestones: {stats.BadMilestones}");
+            sb.AppendLine($"TotalLength: {stats.TotalLength:F3}");
+
+            var statsLog = sb.ToString();
+
             Console.WriteLine();
-            Console.WriteLine($"RoadTotal: {stats.RoadTotal}");
-            Console.WriteLine($"RoadEmpty: {stats.RoadEmpty}");
-            Console.WriteLine($"RoadCorrect: {stats.RoadCorrect}");
-            Console.WriteLine($"RoadWithMilestones: {stats.RoadWithMilestones}");
-            Console.WriteLine($"NoUseWays: {stats.NoUseWays}");
-            Console.WriteLine($"Milestones: {stats.Milestones}");
-            Console.WriteLine($"BadMilestones: {stats.BadMilestones}");
-            Console.WriteLine($"TotalLength: {stats.TotalLength}");
+            Console.WriteLine(statsLog);
+            
+            if (!string.IsNullOrEmpty(logFilePath))
+                File.WriteAllText(logFilePath, statsLog);
         }
 
         private class StatInfo

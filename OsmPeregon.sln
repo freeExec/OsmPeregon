@@ -11,6 +11,8 @@ Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		..\..\..\Documents\Visual Studio 2017\Projects\formatOsm-o5m\FormatOsm-o5m.projitems*{43fefda6-984d-4e37-9bb2-1b7d97bea54b}*SharedItemsImports = 5
 		..\..\..\Documents\Visual Studio 2017\Projects\formatOsm-o5m\FormatOsm-o5m.projitems*{dcc7b1db-3867-49a2-a876-88a1db557f97}*SharedItemsImports = 13
+		..\..\..\Library\ConsoleTokenizer\ConsoleTokenizer.projitems*{43fefda6-984d-4e37-9bb2-1b7d97bea54b}*SharedItemsImports = 5
+		..\..\..\Library\ConsoleTokenizer\ConsoleTokenizer.projitems*{f1de3709-0db6-4a4e-a080-50d88a1ce9d0}*SharedItemsImports = 13
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

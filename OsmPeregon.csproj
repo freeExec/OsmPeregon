@@ -7,5 +7,6 @@
   </PropertyGroup>
 
   <Import Project="..\..\..\Documents\Visual Studio 2017\Projects\formatOsm-o5m\FormatOsm-o5m.projitems" Label="Shared" />
+  <Import Project="..\..\..\Library\ConsoleTokenizer\ConsoleTokenizer.projitems" Label="Shared" />
 
 </Project>

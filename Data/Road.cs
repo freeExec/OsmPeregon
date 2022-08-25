@@ -172,11 +172,6 @@ namespace OsmPeregon.Data
                 {
                     float length = edge.Length;
 
-                    if (edge.Start.LongitudeI == 0 || edge.Start.LatitudeI == 0 || edge.End.LongitudeI == 0 || edge.End.LatitudeI == 0)
-                    {
-                        int gg = 99;
-                    }
-
                     while (lengthTotal + length > nextMilestone)
                     {
                         var shortLength = nextMilestone - lengthTotal;
