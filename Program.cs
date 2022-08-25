@@ -26,6 +26,8 @@ namespace OsmPeregon
         private const int OSM_NEW_MILESTONE_COUNT =  150000;
 #endif
 
+        private const double INTERVAL_DISPLAY_PROGRESS = 0.6;
+
         static void Main(string[] args)
         {
             System.Threading.Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
@@ -41,35 +43,10 @@ namespace OsmPeregon
             //var o5mSource = "test-road.o5m";
             var o5mReader = new O5mStreamReader(o5mSource);
 
-            var milestoneDictionary = new Dictionary<long, float>(OSM_MILESTONE_COUNT);
-
-            Console.Write("Collecting milestones ... ");
-            foreach (var record in o5mReader.SectionNode)
-            {
-                if (record.Contains(OsmConstants.KEY_HIHGWAY, OsmConstants.TAG_MILESTONE))
-                {
-                    var distanceTagStr = record.GetTagValue(OsmConstants.KEY_DISTANCE);
-                    if (string.IsNullOrEmpty(distanceTagStr))
-                        distanceTagStr = record.GetTagValue(OsmConstants.KEY_PK);
-
-                    if (!string.IsNullOrEmpty(distanceTagStr))
-                    {
-                        distanceTagStr = distanceTagStr.Replace("km", string.Empty).Replace("км", string.Empty).TrimEnd();
-                        if (float.TryParse(distanceTagStr, out float distanceTag))
-                        {
-                            milestoneDictionary.Add(record.Id, distanceTag);
-                        }
-                        else
-                        {
-                            //Console.WriteLine($"n{record.Id} - {distanceTagStr}");
-                        }
-                    }
-                }
-            }
-            Console.WriteLine("OK");
+            int columnInfoPosForProgress = 0;
 
             Console.Write("Collecting road info ... ");
-            var roadDictionary = new Dictionary<long, Road>(OSM_ROAD_COUNT);
+            var roads = new List<Road>(OSM_ROAD_COUNT);
             var wayDictionary = new Dictionary<long, Way>(OSM_WAY_COUNT);
 
             foreach (var record in o5mReader.SectionRelation)
@@ -92,12 +69,15 @@ namespace OsmPeregon
                     foreach (var way in road.Ways)
                         wayDictionary[way.Id] = way;
 
-                    roadDictionary.Add(road.Id, road);
+                    roads.Add(road);
                 }
             }
             Console.WriteLine("OK");
 
             Console.Write("Collecting edges ... ");
+            columnInfoPosForProgress = Console.CursorLeft;
+            DateTime lastViewedProgressTime = DateTime.Now;
+
             var edgeDictionary = new Dictionary<long, List<Edge>>(OSM_EDGE_COUNT);
 
             foreach (var reader in o5mReader.SectionWay)
@@ -122,13 +102,46 @@ namespace OsmPeregon
                         addNodeForEdge(edge.NodeEnd, edge);
                     }
                 }
-            }
-            Console.WriteLine("OK");
 
-            Console.Write("Collecting coordinates ... ");
+                if (DateTime.Now.Subtract(lastViewedProgressTime).TotalSeconds > INTERVAL_DISPLAY_PROGRESS)
+                {
+                    Console.CursorLeft = columnInfoPosForProgress;
+                    float progress = o5mReader.GetSectionProgress(O5mHeaderSign.Way);
+                    Console.Write(progress.ToString("P2"));
+                    lastViewedProgressTime = DateTime.Now;
+                }
+            }
+            Console.CursorLeft = columnInfoPosForProgress;
+            Console.WriteLine("OK          ");
+
+            Console.Write("Collecting coordinates and milestones ... ");
+            columnInfoPosForProgress = Console.CursorLeft;
             long lastNodeId = 0;
+            var milestoneDictionary = new Dictionary<long, float>(OSM_MILESTONE_COUNT);
+            lastViewedProgressTime = DateTime.Now;
+
             foreach (var record in o5mReader.SectionNode)
             {
+                if (record.Contains(OsmConstants.KEY_HIHGWAY, OsmConstants.TAG_MILESTONE))
+                {
+                    var distanceTagStr = record.GetTagValue(OsmConstants.KEY_DISTANCE);
+                    if (string.IsNullOrEmpty(distanceTagStr))
+                        distanceTagStr = record.GetTagValue(OsmConstants.KEY_PK);
+
+                    if (!string.IsNullOrEmpty(distanceTagStr))
+                    {
+                        distanceTagStr = distanceTagStr.Replace("km", string.Empty).Replace("км", string.Empty).TrimEnd();
+                        if (float.TryParse(distanceTagStr, out float distanceTag))
+                        {
+                            milestoneDictionary.Add(record.Id, distanceTag);
+                        }
+                        else
+                        {
+                            //Console.WriteLine($"n{record.Id} - {distanceTagStr}");
+                        }
+                    }
+                }
+
                 if (edgeDictionary.TryGetValue(record.Id, out List<Edge> edges))
                 {
                     var coord = new int[] { record.LonI, record.LatI };
@@ -141,13 +154,22 @@ namespace OsmPeregon
                     }
                 }
                 lastNodeId = record.Id;
+
+                if (DateTime.Now.Subtract(lastViewedProgressTime).TotalSeconds > INTERVAL_DISPLAY_PROGRESS)
+                {
+                    Console.CursorLeft = columnInfoPosForProgress;
+                    float progress = o5mReader.GetSectionProgress(O5mHeaderSign.Node);
+                    Console.Write(progress.ToString("P2"));
+                    lastViewedProgressTime = DateTime.Now;
+                }
             }
-            Console.WriteLine("OK");
+            Console.CursorLeft = columnInfoPosForProgress;
+            Console.WriteLine("OK          ");
 
             long globalNewNodeId = (long)(lastNodeId / 100000.0) * 100000;
             var newNodesMilestone = new List<FormatsOsm.WriteModel.Node>(OSM_NEW_MILESTONE_COUNT);
 
-            foreach (var road in roadDictionary.Values)
+            foreach (var road in roads)
             {
                 if (road.Ways.Count == 0)
                 {
@@ -200,7 +222,7 @@ namespace OsmPeregon
                                 })
                         );
                     }
-                    Console.WriteLine($"Generate C:{chainCount}, N:{noUse} I{(hasBaseMalestone ? "B" : "")} (no base milestones): {road}");
+                    Console.WriteLine($"Generate C:{chainCount}, N:{noUse} I{(hasBaseMalestone ? "B" : "")}: {road}");
                 }
                 else
                     Console.WriteLine($"Skip road (no chains) N:{noUse} : {road}");
