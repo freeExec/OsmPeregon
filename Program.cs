@@ -120,6 +120,8 @@ namespace OsmPeregon
             var milestoneDictionary = new Dictionary<long, float>(OSM_MILESTONE_COUNT);
             lastViewedProgressTime = DateTime.Now;
 
+            var badMilestones = new List<(long id, GeomPoint geom, string value)>(1000);
+
             foreach (var record in o5mReader.SectionNode)
             {
                 if (record.Contains(OsmConstants.KEY_HIHGWAY, OsmConstants.TAG_MILESTONE))
@@ -130,27 +132,27 @@ namespace OsmPeregon
 
                     if (!string.IsNullOrEmpty(distanceTagStr))
                     {
-                        distanceTagStr = distanceTagStr.Replace("km", string.Empty).Replace("км", string.Empty).TrimEnd();
-                        if (float.TryParse(distanceTagStr, out float distanceTag))
+                        var distanceTagFilered = distanceTagStr.Replace("km", string.Empty).Replace("км", string.Empty).TrimEnd();
+                        if (float.TryParse(distanceTagFilered, out float distanceTag))
                         {
                             milestoneDictionary.Add(record.Id, distanceTag);
                         }
                         else
                         {
                             //Console.WriteLine($"n{record.Id} - {distanceTagStr}");
+                            badMilestones.Add(new (record.Id, new GeomPoint(record.LonI, record.LatI), distanceTagStr));
                         }
                     }
                 }
 
                 if (edgeDictionary.TryGetValue(record.Id, out List<Edge> edges))
                 {
-                    var coord = new int[] { record.LonI, record.LatI };
                     foreach (var edge in edges)
                     {
                         if (record.Id == edge.NodeStart)
-                            edge.Start = new GeomPoint(coord);
-                        if (record.Id == edge.NodeEnd)
-                            edge.End = new GeomPoint(coord);
+                            edge.Start = new GeomPoint(record.LonI, record.LatI);
+                        else if (record.Id == edge.NodeEnd)
+                            edge.End = new GeomPoint(record.LonI, record.LatI);
                     }
                 }
                 lastNodeId = record.Id;
@@ -165,6 +167,9 @@ namespace OsmPeregon
             }
             Console.CursorLeft = columnInfoPosForProgress;
             Console.WriteLine("OK          ");
+
+            //var geojsonBadMelistones = GeojsonGenerator.FromNodeIds(badMilestones);
+            //File.WriteAllText("bad-melistones-maproulette.geojson", geojsonBadMelistones);
 
             long globalNewNodeId = (long)(lastNodeId / 100000.0) * 100000;
             var newNodesMilestone = new List<FormatsOsm.WriteModel.Node>(OSM_NEW_MILESTONE_COUNT);

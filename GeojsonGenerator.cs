@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FreeExec.Geom;
 using OsmPeregon.Data;
 
 namespace OsmPeregon
@@ -31,6 +32,23 @@ namespace OsmPeregon
                 sbGeojson.AppendLine(",");
 
                 prevMilestone = milestone;
+            }
+
+            sbGeojson.Length -= Environment.NewLine.Length + 1;
+            sbGeojson.AppendLine("]}");
+            return sbGeojson.ToString();
+        }
+
+        public static string FromNodeIds(IEnumerable<(long id, GeomPoint geom, string value)> badMilestones)
+        {
+            sbGeojson.Length = 0;
+            sbGeojson.AppendLine("{\"type\": \"FeatureCollection\",\"features\": [");
+
+            foreach (var node in badMilestones)
+            {
+                sbGeojson.Append($"{{\"type\":\"Feature\",\"properties\":{{\"name\":\"{node.value}\",\"osmid\":{node.id}}},");
+                sbGeojson.Append($"\"geometry\":{{\"type\":\"Point\",\"coordinates\":[{node.geom.Longitude:F6},{node.geom.Latitude:F6}]}}}}");
+                sbGeojson.AppendLine(",");
             }
 
             sbGeojson.Length -= Environment.NewLine.Length + 1;
