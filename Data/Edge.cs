@@ -22,7 +22,7 @@ namespace OsmPeregon.Data
             }
         }
 
-        public bool IsCorrect => !Start.IsEmpty || !End.IsEmpty;
+        public bool IsCorrect => !Start.IsEmpty && !End.IsEmpty;
 
         public Edge(long start, long end)
         {

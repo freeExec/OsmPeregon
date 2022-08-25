@@ -1,4 +1,4 @@
-﻿#define LOCAL
+﻿//#define LOCAL
 
 using System;
 using System.Collections.Generic;
@@ -22,7 +22,7 @@ namespace OsmPeregon
         private const int OSM_ROAD_COUNT          =   37000;
         private const int OSM_WAY_COUNT           =  322000;
         private const int OSM_EDGE_COUNT          = 4120000;
-        private const int OSM_MILESTONE_COUNT     =   12000;
+        private const int OSM_MILESTONE_COUNT     =   17000;
         private const int OSM_NEW_MILESTONE_COUNT =  150000;
 #endif
 
@@ -43,6 +43,7 @@ namespace OsmPeregon
 
             var milestoneDictionary = new Dictionary<long, float>(OSM_MILESTONE_COUNT);
 
+            Console.Write("Collecting milestones ... ");
             foreach (var record in o5mReader.SectionNode)
             {
                 if (record.Contains(OsmConstants.KEY_HIHGWAY, OsmConstants.TAG_MILESTONE))
@@ -65,7 +66,9 @@ namespace OsmPeregon
                     }
                 }
             }
+            Console.WriteLine("OK");
 
+            Console.Write("Collecting road info ... ");
             var roadDictionary = new Dictionary<long, Road>(OSM_ROAD_COUNT);
             var wayDictionary = new Dictionary<long, Way>(OSM_WAY_COUNT);
 
@@ -92,7 +95,9 @@ namespace OsmPeregon
                     roadDictionary.Add(road.Id, road);
                 }
             }
+            Console.WriteLine("OK");
 
+            Console.Write("Collecting edges ... ");
             var edgeDictionary = new Dictionary<long, List<Edge>>(OSM_EDGE_COUNT);
 
             foreach (var reader in o5mReader.SectionWay)
@@ -118,7 +123,9 @@ namespace OsmPeregon
                     }
                 }
             }
+            Console.WriteLine("OK");
 
+            Console.Write("Collecting coordinates ... ");
             long lastNodeId = 0;
             foreach (var record in o5mReader.SectionNode)
             {
@@ -135,25 +142,37 @@ namespace OsmPeregon
                 }
                 lastNodeId = record.Id;
             }
+            Console.WriteLine("OK");
 
             long globalNewNodeId = (long)(lastNodeId / 100000.0) * 100000;
             var newNodesMilestone = new List<FormatsOsm.WriteModel.Node>(OSM_NEW_MILESTONE_COUNT);
 
             foreach (var road in roadDictionary.Values)
             {
-                if (!road.IsCorrect)
+                if (road.Ways.Count == 0)
                 {
-                    Console.WriteLine($"Skip road: {road}");
+                    Console.WriteLine($"Skip road (empty): {road}");
                     continue;
                 }
 
-                int chainCount = road.CreateChainWays();
+                if (!road.IsCorrect)
+                {
+                    Console.WriteLine($"Skip road (incorrect): {road}");
+                    continue;
+                }
+
+                (int chainCount, int noUse) = road.CreateChainWays();
                 if (chainCount > 0)
                 {
                     bool hasBaseMalestone = road.CalculationStatisticsAndMatchMilestones(milestoneDictionary);
                     var milestonesInter = road.GetMilestonesLinearInterpolate();
                     //string geojsonInterpolation = GeojsonGenerator.FromMilestones(milestonesInter);
                     //File.WriteAllText("interpolation.geojson", geojsonInterpolation);
+
+                    if (milestonesInter.Count > 1000)
+                    {
+                        int gg = 99;
+                    }
 
                     newNodesMilestone.AddRange(milestonesInter.Select(m => ToOsmNodeInterpolate(m, globalNewNodeId++)));
 
@@ -181,7 +200,10 @@ namespace OsmPeregon
                                 })
                         );
                     }
+                    Console.WriteLine($"Generate C:{chainCount}, N:{noUse} I{(hasBaseMalestone ? "B" : "")} (no base milestones): {road}");
                 }
+                else
+                    Console.WriteLine($"Skip road (no chains) N:{noUse} : {road}");
             }
             SaveOsmDumpWithGeneratedMilestones(newNodesMilestone);
         }
