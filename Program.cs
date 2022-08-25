@@ -103,15 +103,19 @@ namespace OsmPeregon
                     }
                 }
 
-                if (DateTime.Now.Subtract(lastViewedProgressTime).TotalSeconds > INTERVAL_DISPLAY_PROGRESS)
+                if (!Console.IsOutputRedirected)
                 {
-                    Console.CursorLeft = columnInfoPosForProgress;
-                    float progress = o5mReader.GetSectionProgress(O5mHeaderSign.Way);
-                    Console.Write(progress.ToString("P2"));
-                    lastViewedProgressTime = DateTime.Now;
+                    if (DateTime.Now.Subtract(lastViewedProgressTime).TotalSeconds > INTERVAL_DISPLAY_PROGRESS)
+                    {
+                        Console.CursorLeft = columnInfoPosForProgress;
+                        float progress = o5mReader.GetSectionProgress(O5mHeaderSign.Way);
+                        Console.Write(progress.ToString("P2"));
+                        lastViewedProgressTime = DateTime.Now;
+                    }
                 }
             }
-            Console.CursorLeft = columnInfoPosForProgress;
+            if (!Console.IsOutputRedirected)
+                Console.CursorLeft = columnInfoPosForProgress;
             Console.WriteLine("OK          ");
 
             Console.Write("Collecting coordinates and milestones ... ");
@@ -157,16 +161,22 @@ namespace OsmPeregon
                 }
                 lastNodeId = record.Id;
 
-                if (DateTime.Now.Subtract(lastViewedProgressTime).TotalSeconds > INTERVAL_DISPLAY_PROGRESS)
+                if (!Console.IsOutputRedirected)
                 {
-                    Console.CursorLeft = columnInfoPosForProgress;
-                    float progress = o5mReader.GetSectionProgress(O5mHeaderSign.Node);
-                    Console.Write(progress.ToString("P2"));
-                    lastViewedProgressTime = DateTime.Now;
+                    if (DateTime.Now.Subtract(lastViewedProgressTime).TotalSeconds > INTERVAL_DISPLAY_PROGRESS)
+                    {
+                        Console.CursorLeft = columnInfoPosForProgress;
+                        float progress = o5mReader.GetSectionProgress(O5mHeaderSign.Node);
+                        Console.Write(progress.ToString("P2"));
+                        lastViewedProgressTime = DateTime.Now;
+                    }
                 }
             }
-            Console.CursorLeft = columnInfoPosForProgress;
+            if (!Console.IsOutputRedirected)
+                Console.CursorLeft = columnInfoPosForProgress;
             Console.WriteLine("OK          ");
+
+            o5mReader.Close();
 
             //var geojsonBadMelistones = GeojsonGenerator.FromNodeIds(badMilestones);
             //File.WriteAllText("bad-melistones-maproulette.geojson", geojsonBadMelistones);
