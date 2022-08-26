@@ -11,12 +11,13 @@ namespace OsmPeregon.Data
         public readonly long Id;
 
         private List<Edge> edges;
+
         public Direction DirectionRole;
         public OrderStatus OrderStatus;
         public bool IsReverse { get; private set; }
 
         public bool AllowReverse => DirectionRole == Direction.Both;
-        public bool IsBackward => DirectionRole == Direction.Backward;
+        public bool IsNotEnter => !AllowReverse && IsReverse;
 
         public ICollection<Edge> EdgesRaw => edges;
 
@@ -40,6 +41,8 @@ namespace OsmPeregon.Data
                 "" => Direction.Both,
                 _ => Direction.NotSet
             };
+            if (DirectionRole == Direction.Backward)
+                IsReverse = true;
         }
 
         public void AddEdges(IEnumerable<Edge> edges)
@@ -47,7 +50,12 @@ namespace OsmPeregon.Data
             this.edges = edges.ToList();
         }
 
-        public void ReverseDirection() => IsReverse = !IsReverse;
+        public void ReverseDirection()
+        {
+            if (!AllowReverse)
+                throw new NotSupportedException("Not allow reversing");
+            IsReverse = !IsReverse;
+        }
 
         public override string ToString() => $"W{Id} - Edge: {edges?.Count ?? 0} {(!IsCorrect ? '-' : ' ')} - {DirectionRoleChar} [{FirstNode}-{LastNode}] {(OrderStatus == OrderStatus.Reserve ? 'v' : ' ')}";
 

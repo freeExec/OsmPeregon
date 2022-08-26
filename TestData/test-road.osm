@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <osm version='0.6' generator='JOSM'>
-  <node id='-137735' action='modify' visible='true' lat='54.57902783753' lon='48.95132225493' />
+  <node id='-137736' action='modify' visible='true' lat='54.57902783753' lon='48.95132225493' />
   <node id='-137737' action='modify' visible='true' lat='54.58418189824' lon='48.95123242341' />
   <node id='-137738' action='modify' visible='true' lat='54.59006401929' lon='48.95168158105' />
   <node id='-137739' action='modify' visible='true' lat='54.59474828687' lon='48.96111389153' />
@@ -47,7 +47,7 @@
     <tag k='ref' v='Звено 6' />
   </way>
   <way id='-103255' action='modify' visible='true'>
-    <nd ref='-137735' />
+    <nd ref='-137736' />
     <nd ref='-137737' />
     <nd ref='-137738' />
     <tag k='highway' v='primary' />
@@ -73,7 +73,7 @@
     <member type='way' ref='-103224' role='forward' />
     <member type='way' ref='-103269' role='forward' />
     <member type='way' ref='-103255' role='' />
-    <member type='way' ref='-103241' role='backward' />
+    <member type='way' ref='-103241' role='forward' />
     <member type='way' ref='-103253' role='' />
     <member type='way' ref='-103272' role='' />
     <tag k='name' v='Тестовый' />

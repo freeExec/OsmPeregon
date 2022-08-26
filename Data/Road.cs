@@ -53,18 +53,21 @@ namespace OsmPeregon.Data
 
             chainForward = new List<Way>();
 
-            IEnumerable<Way> candidatList = mapEdge.Where(l => l.Count() == 1).FirstOrDefault(l => l.Count(w => !w.IsBackward) > 0);
+            IEnumerable<Way> candidatList;
+            candidatList = mapEdge.Where(l => l.Count() == 1).FirstOrDefault(l => l.Any(w => !w.IsNotEnter));
+            //if (candidatList == default)
+            //    candidatList = mapEdge.Where(l => l.Count() == 1).FirstOrDefault(l => l.Count(w => !w.IsBackward) > 0);
             if (candidatList == default)
-                candidatList = mapEdge.FirstOrDefault(l => l.Count(w => !w.IsBackward) > 0);
+                candidatList = mapEdge.FirstOrDefault(l => l.Any(w => !w.IsNotEnter));
             Way lastWay = default;
             Way candidatWay = default;
 
             do
             {
-                candidatWay = candidatList.FirstOrDefault(w => w.OrderStatus != OrderStatus.Reserve && !w.IsBackward);
+                candidatWay = candidatList.FirstOrDefault(w => w.OrderStatus != OrderStatus.Reserve && !w.IsNotEnter && w.AllowReverse);
                 if (candidatWay == null)
                 {
-
+                    candidatWay = candidatList.FirstOrDefault(w => w.OrderStatus != OrderStatus.Reserve && !w.IsNotEnter);
                 }
                 if (candidatWay != null)
                 {
@@ -80,8 +83,8 @@ namespace OsmPeregon.Data
                 }
             } while (candidatWay != null);
 
-            var nouse = mapEdge.Where(l => l.Any(w => w.OrderStatus != OrderStatus.Reserve)).ToList();
-            return (chainForward.Count, nouse.Count);
+            var nouse = ways.Count(w => w.OrderStatus != OrderStatus.Reserve);
+            return (chainForward.Count, nouse);
         }
 
         public float CalculationStatisticsAndMatchMilestones(Dictionary<long, float> osmMilestones, bool forceExit = false)
