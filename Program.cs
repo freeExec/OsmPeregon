@@ -1,5 +1,5 @@
-﻿//#define LOCAL
-//#define DETAIL_ROAD_GEN_LOG
+﻿#define LOCAL
+#define DETAIL_ROAD_GEN_LOG
 
 using System;
 using System.Collections.Generic;
@@ -234,7 +234,9 @@ namespace OsmPeregon
                     //string geojsonInterpolation = GeojsonGenerator.FromMilestones(milestonesInter);
                     //File.WriteAllText("interpolation.geojson", geojsonInterpolation);
 
+                    int mlI = newNodesMilestone.Count;
                     newNodesMilestone.AddRange(milestonesInter.Select(m => ToOsmNodeInterpolate(m, globalNewNodeId++)));
+                    statsInfo.GeneratedInterpolateMilestones += newNodesMilestone.Count - mlI;
 
                     if (hasBaseMalestone)
                     {
@@ -245,6 +247,7 @@ namespace OsmPeregon
                         //string geojsonOrigMilestone = GeojsonGenerator.FromMilestones(milestonesBase.Where(m => m.IsOriginal));
                         //File.WriteAllText("orig.geojson", geojsonOrigMilestone);
 
+                        int mlB = newNodesMilestone.Count;
                         MilestonePoint prevMilestone = milestonesBase.First();
                         newNodesMilestone.AddRange(
                             milestonesBase
@@ -259,6 +262,7 @@ namespace OsmPeregon
                                     return node;
                                 })
                         );
+                        statsInfo.GeneratedBaseMilestones += newNodesMilestone.Count - mlB;
 
                         statsInfo.RoadWithMilestones++;
                     }
@@ -280,7 +284,10 @@ namespace OsmPeregon
         {
             var node = new FormatsOsm.WriteModel.Node(id, milestone.GeomPosition.LongitudeI, milestone.GeomPosition.LatitudeI);
             node.AddTag(OsmConstants.KEY_HIHGWAY, OsmConstants.TAG_MILESTONE);
-            node.AddTag(OsmConstants.KEY_DISTANCE, milestone.Milestone.ToString("F3"));
+            if (MathF.Floor(milestone.Milestone) == milestone.Milestone)
+                node.AddTag(OsmConstants.KEY_DISTANCE, milestone.Milestone.ToString("F0"));
+            else
+                node.AddTag(OsmConstants.KEY_DISTANCE, milestone.Milestone.ToString("F3"));
             node.AddTag("generate", "interpolate");
             return node;
         }
@@ -291,7 +298,10 @@ namespace OsmPeregon
             node.AddTag(OsmConstants.KEY_HIHGWAY, OsmConstants.TAG_MILESTONE);
             node.AddTag(OsmConstants.KEY_DISTANCE, milestone.Milestone.ToString("F3"));
             node.AddTag("generate", "base");
-            node.AddTag("error", (1 - (milestone.Milestone - prevMilestone.Milestone)).ToString("F3"));
+            if (milestone is MilestonePointWithError msError)
+            {
+                    node.AddTag("error", (1 - msError.Error).ToString("F3"));
+            }
             return node;
         }
 
@@ -317,13 +327,15 @@ namespace OsmPeregon
             sb.AppendLine($"NoUseWays: {stats.NoUseWays}");
             sb.AppendLine($"Milestones: {stats.Milestones}");
             sb.AppendLine($"BadMilestones: {stats.BadMilestones}");
+            sb.AppendLine($"GeneratedInterpolateMilestones: {stats.GeneratedInterpolateMilestones}");
+            sb.AppendLine($"GeneratedBaseMilestones: {stats.GeneratedBaseMilestones}");
             sb.AppendLine($"TotalLength: {stats.TotalLength:F3}");
 
             var statsLog = sb.ToString();
 
             Console.WriteLine();
             Console.WriteLine(statsLog);
-            
+
             if (!string.IsNullOrEmpty(logFilePath))
                 File.WriteAllText(logFilePath, statsLog);
         }
@@ -339,6 +351,8 @@ namespace OsmPeregon
             public int Milestones;
             public int BadMilestones;
 
+            public int GeneratedInterpolateMilestones;
+            public int GeneratedBaseMilestones;
             public double TotalLength;
         }
     }

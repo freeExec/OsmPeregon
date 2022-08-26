@@ -239,7 +239,10 @@ namespace OsmPeregon.Data
                         var milestoneMath = errorsMilestonesDistance[lastNode];
                         if (!milestoneMath.IsBad)
                         {
-                            milestonePoints.Add(new MilestonePoint(mile, way.IsReverse ? edge.Start : edge.End, true));
+                            milestonePoints.Add(new MilestonePointWithError(mile, way.IsReverse ? edge.Start : edge.End, true)
+                            {
+                                Error = mile - lengthTotal
+                            });
 
                             lengthTotal = mile;
                             nextMilestone = lengthTotal + MILESTONE_STEP_KM;

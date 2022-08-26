@@ -21,6 +21,16 @@ namespace OsmPeregon.Data
         }
     }
 
+    public class MilestonePointWithError : MilestonePoint
+    {
+        public float Error;
+
+        public MilestonePointWithError(float mile, GeomPoint geom, bool isOriginal)
+            : base(mile, geom, isOriginal)
+        {
+        }
+    }
+
     public class MilestoneMatch
     {
         public float OriginalDistance;
