@@ -1,17 +1,19 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.32002.261
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31919.166
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OsmPeregon", "OsmPeregon.csproj", "{43FEFDA6-984D-4E37-9BB2-1B7D97BEA54B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OsmPeregon", "OsmPeregon.csproj", "{43FEFDA6-984D-4E37-9BB2-1B7D97BEA54B}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "FormatOsm-o5m", "..\..\..\Documents\Visual Studio 2017\Projects\formatOsm-o5m\FormatOsm-o5m.shproj", "{DCC7B1DB-3867-49A2-A876-88A1DB557F97}"
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "FormatOsm-o5m", "..\..\..\Library\formatOsm-o5m\FormatOsm-o5m.shproj", "{DCC7B1DB-3867-49A2-A876-88A1DB557F97}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "ConsoleTokenizer", "..\..\..\Library\ConsoleTokenizer\ConsoleTokenizer.shproj", "{F1DE3709-0DB6-4A4E-A080-50D88A1CE9D0}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		..\..\..\Documents\Visual Studio 2017\Projects\formatOsm-o5m\FormatOsm-o5m.projitems*{43fefda6-984d-4e37-9bb2-1b7d97bea54b}*SharedItemsImports = 5
-		..\..\..\Documents\Visual Studio 2017\Projects\formatOsm-o5m\FormatOsm-o5m.projitems*{dcc7b1db-3867-49a2-a876-88a1db557f97}*SharedItemsImports = 13
 		..\..\..\Library\ConsoleTokenizer\ConsoleTokenizer.projitems*{43fefda6-984d-4e37-9bb2-1b7d97bea54b}*SharedItemsImports = 5
+		..\..\..\Library\formatOsm-o5m\FormatOsm-o5m.projitems*{43fefda6-984d-4e37-9bb2-1b7d97bea54b}*SharedItemsImports = 5
+		..\..\..\Library\formatOsm-o5m\FormatOsm-o5m.projitems*{dcc7b1db-3867-49a2-a876-88a1db557f97}*SharedItemsImports = 13
 		..\..\..\Library\ConsoleTokenizer\ConsoleTokenizer.projitems*{f1de3709-0db6-4a4e-a080-50d88a1ce9d0}*SharedItemsImports = 13
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
