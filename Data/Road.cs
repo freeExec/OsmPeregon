@@ -13,6 +13,15 @@ namespace OsmPeregon.Data
     {
         private const float MILESTONE_STEP_KM = 1;
 
+        private enum MatchMilestonesErrorCode
+        {
+            OK = 0,
+            NoMilestones,
+            NextEntryPoint,
+            DublicateMilestones,
+            NoVariants,
+        }
+
         private readonly List<Way> ways;
         //private List<bool> reversed;
         private List<Way> chainForward;
@@ -44,50 +53,88 @@ namespace OsmPeregon.Data
                 return $"{Name} ({Ref})";
         }
 
-        public (int use, int noUse) CreateChainWays()
+        public (int use, int noUse, float length, bool hasMilestone) CreateChainWays(Dictionary<long, float> osmMilestones)
         {
             var t = ways
                 .Select(w => Tuple.Create(w.Edges.First().NodeStart, w))
                 .Concat(ways.Select(w => Tuple.Create(w.Edges.Last().NodeEnd, w)));
             var mapEdge = (Lookup<long, Way>)t.ToLookup(s => s.Item1, s => s.Item2);
 
+            int entryPointsCount = mapEdge.Count(l => l.Count() == 1);
+            bool isRoundabout = entryPointsCount == 0;
+
             chainForward = new List<Way>();
 
-            IEnumerable<Way> candidatList;
-            candidatList = mapEdge.Where(l => l.Count() == 1).FirstOrDefault(l => l.Any(w => !w.IsNotEnter));
-            //if (candidatList == default)
-            //    candidatList = mapEdge.Where(l => l.Count() == 1).FirstOrDefault(l => l.Count(w => !w.IsBackward) > 0);
-            if (candidatList == default)
-                candidatList = mapEdge.FirstOrDefault(l => l.Any(w => !w.IsNotEnter));
-            Way lastWay = default;
-            Way candidatWay = default;
+            int skipEntryPoint = 0;
 
-            do
+            float length = 0;
+            MatchMilestonesErrorCode code;
+            bool hasMilestone = true;
+
+            for (int entryPointIndex = 0; entryPointIndex < entryPointsCount || isRoundabout; entryPointIndex++)
             {
-                candidatWay = candidatList.FirstOrDefault(w => w.OrderStatus != OrderStatus.Reserve && !w.IsNotEnter && w.AllowReverse);
-                if (candidatWay == null)
-                {
-                    candidatWay = candidatList.FirstOrDefault(w => w.OrderStatus != OrderStatus.Reserve && !w.IsNotEnter);
-                }
-                if (candidatWay != null)
-                {
-                    chainForward.Add(candidatWay);
-                    candidatWay.OrderStatus = OrderStatus.Reserve;
+                chainForward.Clear();
 
-                    if (lastWay != null && lastWay.LastNode != candidatWay.FirstNode)
-                        candidatWay.ReverseDirection();
-
-                    lastWay = candidatWay;
-                    var last = candidatWay.LastNode;
-                    candidatList = mapEdge[last];
+                IEnumerable<Way> candidatList;
+                if (isRoundabout)
+                {
+                    candidatList = mapEdge.FirstOrDefault(l => l.Any(w => !w.IsNotEnter));
+                    isRoundabout = false;
                 }
-            } while (candidatWay != null);
+                else
+                    candidatList = mapEdge.Where(l => l.Count() == 1).Skip(skipEntryPoint).FirstOrDefault(l => l.Any(w => !w.IsNotEnter));
+
+                Way lastWay = default;
+                Way candidatWay = default;
+
+                do
+                {
+                    candidatWay = candidatList.FirstOrDefault(w => w.OrderStatus != OrderStatus.Reserve && !w.IsNotEnter && w.AllowReverse);
+                    if (candidatWay == null)
+                    {
+                        candidatWay = candidatList.FirstOrDefault(w => w.OrderStatus != OrderStatus.Reserve && !w.IsNotEnter);
+                    }
+                    if (candidatWay != null)
+                    {
+                        chainForward.Add(candidatWay);
+                        candidatWay.OrderStatus = OrderStatus.Reserve;
+
+                        if (lastWay != null && lastWay.LastNode != candidatWay.FirstNode)
+                            candidatWay.ReverseDirection();
+
+                        lastWay = candidatWay;
+                        var last = candidatWay.LastNode;
+                        candidatList = mapEdge[last];
+                    }
+                } while (candidatWay != null);
+
+                (code, length) = CalculationStatisticsAndMatchMilestones(osmMilestones);
+                if (code == MatchMilestonesErrorCode.NextEntryPoint)
+                {
+                    ways.ForEach(w => w.OrderStatus = OrderStatus.None);
+                    skipEntryPoint++;
+                }
+                else if (code == MatchMilestonesErrorCode.OK)
+                {
+                    break;
+                }
+                else if (code == MatchMilestonesErrorCode.NoMilestones)
+                {
+                    hasMilestone = false;
+                    break;
+                }
+                else if (code == MatchMilestonesErrorCode.DublicateMilestones)
+                {
+                    length = 0;
+                    break;
+                }
+            }
 
             var nouse = ways.Count(w => w.OrderStatus != OrderStatus.Reserve);
-            return (chainForward.Count, nouse);
+            return (chainForward.Count, nouse, length, hasMilestone);
         }
 
-        public float CalculationStatisticsAndMatchMilestones(Dictionary<long, float> osmMilestones, bool forceExit = false)
+        private (MatchMilestonesErrorCode code, float length) CalculationStatisticsAndMatchMilestones(Dictionary<long, float> osmMilestones)
         {
             float length = 0f;
             errorsMilestonesDistance = new Dictionary<long, MilestoneMatch>();
@@ -124,19 +171,11 @@ namespace OsmPeregon.Data
             }
             catch (ArgumentException)
             {
-                return 0f;
+                return (MatchMilestonesErrorCode.DublicateMilestones, 0);
             }
 
             if (nextLess > nextMore)
-            {
-                if (forceExit)
-                    throw new NotSupportedException();
-
-                chainForward.Reverse();
-                chainForward.ForEach(c => c.ReverseDirection());
-
-                return CalculationStatisticsAndMatchMilestones(osmMilestones, true);
-            }
+                return (MatchMilestonesErrorCode.NextEntryPoint, 0);
 
             if (errorsMilestonesDistance.Count > 0)
             {
@@ -150,10 +189,10 @@ namespace OsmPeregon.Data
 
                     statStartMilestone = errorsMilestonesDistance.Values.Where(e => !e.IsBad).Average(e => e.Error);
                 }
-                return length;
+                return (MatchMilestonesErrorCode.OK, length);
             }
 
-            return 0;
+            return (MatchMilestonesErrorCode.NoMilestones, length);
         }
 
         public List<MilestonePoint> GetMilestonesLinearInterpolate()

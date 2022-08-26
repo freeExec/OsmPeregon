@@ -1,5 +1,5 @@
-﻿#define LOCAL
-#define DETAIL_ROAD_GEN_LOG
+﻿//#define LOCAL
+//#define DETAIL_ROAD_GEN_LOG
 
 using System;
 using System.Collections.Generic;
@@ -223,13 +223,11 @@ namespace OsmPeregon
                 }
                 statsInfo.RoadCorrect++;
 
-                (int chainCount, int noUse) = road.CreateChainWays();
+                (int chainCount, int noUse, float length, bool hasBaseMalestone) = road.CreateChainWays(milestoneDictionary);
                 statsInfo.NoUseWays += noUse;
                 if (chainCount > 0)
                 {
-                    float length = road.CalculationStatisticsAndMatchMilestones(milestoneDictionary);
                     statsInfo.TotalLength += length;
-                    bool hasBaseMalestone = length > 0;
                     var milestonesInter = road.GetMilestonesLinearInterpolate();
                     //string geojsonInterpolation = GeojsonGenerator.FromMilestones(milestonesInter);
                     //File.WriteAllText("interpolation.geojson", geojsonInterpolation);
