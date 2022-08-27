@@ -57,6 +57,22 @@ namespace OsmPeregon.Data
             IsReverse = !IsReverse;
         }
 
+        public void SetOneway(string onewayTag)
+        {
+            if (string.IsNullOrEmpty(onewayTag) || DirectionRole != Direction.Both)
+                return;
+            
+            if (onewayTag == "yes" || onewayTag == "1")
+            {
+                DirectionRole = Direction.Forward;
+            }
+            else if (onewayTag == "-1")
+            {
+                IsReverse = true;
+                DirectionRole = Direction.Backward;
+            }            
+        }
+
         public override string ToString() => $"W{Id} - Edge: {edges?.Count ?? 0} {(!IsCorrect ? '-' : ' ')} - {DirectionRoleChar} [{FirstNode}-{LastNode}] {(OrderStatus == OrderStatus.Reserve ? 'v' : ' ')}";
 
         private char DirectionRoleChar => DirectionRole switch { Direction.Forward => '↑', Direction.Backward => '↓', Direction.Both => '⇅', _ => 'X' };

@@ -68,6 +68,8 @@ namespace OsmPeregon
                 if (record.Contains(OsmConstants.KEY_TYPE, OsmConstants.KEY_ROUTE)
                     && record.Contains(OsmConstants.KEY_ROUTE, OsmConstants.TAG_ROAD))
                 {
+                    if (record.Contains(OsmConstants.KEY_NETWORK, "e-road"))
+                        continue;
                     var road = new Road(
                         record.Id,
                         record.GetTagValue(OsmConstants.KEY_REF),
@@ -96,11 +98,12 @@ namespace OsmPeregon
 
             var edgeDictionary = new Dictionary<long, List<Edge>>(OSM_EDGE_COUNT);
 
-            foreach (var reader in o5mReader.SectionWay)
+            foreach (var record in o5mReader.SectionWay)
             {
-                if (wayDictionary.TryGetValue(reader.Id, out Way way))
+                if (wayDictionary.TryGetValue(record.Id, out Way way))
                 {
-                    way.AddEdges(reader.Refs.Pairwise().Select(pair => new Edge(pair.Previous, pair.Current)));
+                    //way.SetOneway(record.GetTagValue(OsmConstants.KEY_ONEWAY));
+                    way.AddEdges(record.Refs.Pairwise().Select(pair => new Edge(pair.Previous, pair.Current)));
                     foreach (var edge in way.Edges)
                     {
                         Action<long, Edge> addNodeForEdge = (long nodeId, Edge edg) =>

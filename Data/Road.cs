@@ -64,7 +64,6 @@ namespace OsmPeregon.Data
             bool isRoundabout = entryPointsCount == 0;
 
             chainForward = new List<Way>();
-
             int skipEntryPoint = 0;
 
             float length = 0;
@@ -74,6 +73,7 @@ namespace OsmPeregon.Data
             for (int entryPointIndex = 0; entryPointIndex < entryPointsCount || isRoundabout; entryPointIndex++)
             {
                 chainForward.Clear();
+                ways.ForEach(w => w.OrderStatus = OrderStatus.None);
 
                 IGrouping<long, Way> candidatList;
                 if (isRoundabout)
@@ -125,7 +125,6 @@ namespace OsmPeregon.Data
                         chainForward.Add(candidatWay);
                         candidatWay.OrderStatus = OrderStatus.Reserve;
 
-
                         lastWay = candidatWay;
                         var last = candidatWay.LastNode;
                         var exists = mapEdge[last];
@@ -142,7 +141,6 @@ namespace OsmPeregon.Data
                 (code, length) = CalculationStatisticsAndMatchMilestones(osmMilestones);
                 if (code == MatchMilestonesErrorCode.NextEntryPoint)
                 {
-                    ways.ForEach(w => w.OrderStatus = OrderStatus.None);
                     skipEntryPoint++;
                     continue;
                 }
