@@ -282,7 +282,8 @@ namespace OsmPeregon
         {
             var node = new FormatsOsm.WriteModel.Node(id, milestone.GeomPosition.LongitudeI, milestone.GeomPosition.LatitudeI);
             node.AddTag(OsmConstants.KEY_HIHGWAY, OsmConstants.TAG_MILESTONE);
-            node.AddTag(OsmConstants.KEY_REF, refRoad);
+            if (!string.IsNullOrEmpty(refRoad))
+                node.AddTag(OsmConstants.KEY_REF, refRoad);
             if (MathF.Floor(milestone.Milestone) == milestone.Milestone)
                 node.AddTag(OsmConstants.KEY_DISTANCE, milestone.Milestone.ToString("F0"));
             else
@@ -295,7 +296,8 @@ namespace OsmPeregon
         {
             var node = new FormatsOsm.WriteModel.Node(id, milestone.GeomPosition.LongitudeI, milestone.GeomPosition.LatitudeI);
             node.AddTag(OsmConstants.KEY_HIHGWAY, OsmConstants.TAG_MILESTONE);
-            node.AddTag(OsmConstants.KEY_REF, refRoad);
+            if (!string.IsNullOrEmpty(refRoad))
+                node.AddTag(OsmConstants.KEY_REF, refRoad);
             if (MathF.Floor(milestone.Milestone) == milestone.Milestone)
                 node.AddTag(OsmConstants.KEY_DISTANCE, milestone.Milestone.ToString("F0"));
             else

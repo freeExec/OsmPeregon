@@ -75,14 +75,16 @@ namespace OsmPeregon.Data
             {
                 chainForward.Clear();
 
-                IEnumerable<Way> candidatList;
+                IGrouping<long, Way> candidatList;
                 if (isRoundabout)
                 {
                     candidatList = mapEdge.FirstOrDefault(l => l.Any(w => !w.IsNotEnter));
                     isRoundabout = false;
                 }
                 else
+                {
                     candidatList = mapEdge.Where(l => l.Count() == 1).Skip(skipEntryPoint).FirstOrDefault(l => l.Any(w => !w.IsNotEnter));
+                }
 
                 Way lastWay = default;
                 Way candidatWay = default;
@@ -93,6 +95,17 @@ namespace OsmPeregon.Data
                     if (candidatWay == null)
                     {
                         candidatWay = candidatList.FirstOrDefault(w => w.OrderStatus != OrderStatus.Reserve && !w.IsNotEnter);
+                    }
+                    
+                    if (lastWay == null && candidatWay != null)
+                    {
+                        if (candidatList.Key != candidatWay.FirstNode)
+                        {
+                            if (candidatWay.AllowReverse)
+                                candidatWay.ReverseDirection();
+                            else
+                                candidatWay = null;
+                        }
                     }
                     if (candidatWay != null)
                     {
@@ -115,7 +128,14 @@ namespace OsmPeregon.Data
 
                         lastWay = candidatWay;
                         var last = candidatWay.LastNode;
-                        candidatList = mapEdge[last];
+                        var exists = mapEdge[last];
+                        if (exists.Any())
+                            candidatList = (IGrouping<long, Way>)exists;
+                        else
+                        {
+                            candidatList = null;
+                            candidatWay = null;
+                        }
                     }
                 } while (candidatWay != null);
 

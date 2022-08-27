@@ -4,6 +4,8 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
     <Authors>freeExec</Authors>
+    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+    <Version>1.1.1</Version>
   </PropertyGroup>
 
   <Import Project="..\..\..\Library\formatOsm-o5m\FormatOsm-o5m.projitems" Label="Shared" />
