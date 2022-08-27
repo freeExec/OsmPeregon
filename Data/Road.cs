@@ -96,11 +96,22 @@ namespace OsmPeregon.Data
                     }
                     if (candidatWay != null)
                     {
+                        if (lastWay != null && lastWay.LastNode != candidatWay.FirstNode)
+                        {
+                            if (candidatWay.AllowReverse)
+                                candidatWay.ReverseDirection();
+                            else
+                            {
+                                candidatWay = null;
+                                ways.ForEach(w => w.OrderStatus = OrderStatus.None);
+                                skipEntryPoint++;
+                                continue;
+                            }
+                        }
+
                         chainForward.Add(candidatWay);
                         candidatWay.OrderStatus = OrderStatus.Reserve;
 
-                        if (lastWay != null && lastWay.LastNode != candidatWay.FirstNode)
-                            candidatWay.ReverseDirection();
 
                         lastWay = candidatWay;
                         var last = candidatWay.LastNode;
@@ -113,6 +124,7 @@ namespace OsmPeregon.Data
                 {
                     ways.ForEach(w => w.OrderStatus = OrderStatus.None);
                     skipEntryPoint++;
+                    continue;
                 }
                 else if (code == MatchMilestonesErrorCode.OK)
                 {
@@ -280,7 +292,7 @@ namespace OsmPeregon.Data
                         {
                             milestonePoints.Add(new MilestonePointWithError(mile, way.IsReverse ? edge.Start : edge.End, true)
                             {
-                                Error = mile - lengthTotal
+                                Error = lengthTotal - mile
                             });
 
                             lengthTotal = mile;

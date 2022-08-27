@@ -200,7 +200,7 @@ namespace OsmPeregon
             //var geojsonBadMelistones = GeojsonGenerator.FromNodeIds(badMilestones);
             //File.WriteAllText("bad-melistones-maproulette.geojson", geojsonBadMelistones);
 
-            long globalNewNodeId = (long)(lastNodeId / 100000.0) * 100000;
+            long globalNewNodeId = (long)(lastNodeId / 100000.0 + 1) * 100000;
             var newNodesMilestone = new List<FormatsOsm.WriteModel.Node>(OSM_NEW_MILESTONE_COUNT);
 
             foreach (var road in roads)
@@ -233,7 +233,7 @@ namespace OsmPeregon
                     //File.WriteAllText("interpolation.geojson", geojsonInterpolation);
 
                     int mlI = newNodesMilestone.Count;
-                    newNodesMilestone.AddRange(milestonesInter.Select(m => ToOsmNodeInterpolate(m, globalNewNodeId++)));
+                    newNodesMilestone.AddRange(milestonesInter.Select(m => ToOsmNodeInterpolate(road.Ref, m, globalNewNodeId++)));
                     statsInfo.GeneratedInterpolateMilestones += newNodesMilestone.Count - mlI;
 
                     if (hasBaseMalestone)
@@ -255,7 +255,7 @@ namespace OsmPeregon
                                 )
                                 .Select(m =>
                                 {
-                                    var node = ToOsmNodeBase(m, prevMilestone, globalNewNodeId++);
+                                    var node = ToOsmNodeBase(road.Ref, m, prevMilestone, globalNewNodeId++);
                                     prevMilestone = m;
                                     return node;
                                 })
@@ -278,10 +278,11 @@ namespace OsmPeregon
             PrintStats(statsInfo, token["l"]);
         }
 
-        private static FormatsOsm.WriteModel.Node ToOsmNodeInterpolate(MilestonePoint milestone, long id)
+        private static FormatsOsm.WriteModel.Node ToOsmNodeInterpolate(string refRoad, MilestonePoint milestone, long id)
         {
             var node = new FormatsOsm.WriteModel.Node(id, milestone.GeomPosition.LongitudeI, milestone.GeomPosition.LatitudeI);
             node.AddTag(OsmConstants.KEY_HIHGWAY, OsmConstants.TAG_MILESTONE);
+            node.AddTag(OsmConstants.KEY_REF, refRoad);
             if (MathF.Floor(milestone.Milestone) == milestone.Milestone)
                 node.AddTag(OsmConstants.KEY_DISTANCE, milestone.Milestone.ToString("F0"));
             else
@@ -290,15 +291,19 @@ namespace OsmPeregon
             return node;
         }
 
-        private static FormatsOsm.WriteModel.Node ToOsmNodeBase(MilestonePoint milestone, MilestonePoint prevMilestone, long id)
+        private static FormatsOsm.WriteModel.Node ToOsmNodeBase(string refRoad, MilestonePoint milestone, MilestonePoint prevMilestone, long id)
         {
             var node = new FormatsOsm.WriteModel.Node(id, milestone.GeomPosition.LongitudeI, milestone.GeomPosition.LatitudeI);
             node.AddTag(OsmConstants.KEY_HIHGWAY, OsmConstants.TAG_MILESTONE);
-            node.AddTag(OsmConstants.KEY_DISTANCE, milestone.Milestone.ToString("F3"));
+            node.AddTag(OsmConstants.KEY_REF, refRoad);
+            if (MathF.Floor(milestone.Milestone) == milestone.Milestone)
+                node.AddTag(OsmConstants.KEY_DISTANCE, milestone.Milestone.ToString("F0"));
+            else
+                node.AddTag(OsmConstants.KEY_DISTANCE, milestone.Milestone.ToString("F3"));
             node.AddTag("generate", "base");
             if (milestone is MilestonePointWithError msError)
             {
-                    node.AddTag("error", (1 - msError.Error).ToString("F3"));
+                    node.AddTag("error", msError.Error.ToString("F3"));
             }
             return node;
         }
