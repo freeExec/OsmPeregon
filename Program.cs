@@ -1,5 +1,7 @@
-﻿//#define LOCAL
-//#define DETAIL_ROAD_GEN_LOG
+﻿#if DEBUG
+#define LOCAL
+#define DETAIL_ROAD_GEN_LOG
+#endif
 
 using System;
 using System.Collections.Generic;
@@ -74,12 +76,13 @@ namespace OsmPeregon
                         record.Id,
                         record.GetTagValue(OsmConstants.KEY_REF),
                         record.GetTagValue(OsmConstants.KEY_NAME),
-                        record.Members.Select(member =>
-                        {
-                            if (wayDictionary.TryGetValue(member.Id, out Way w))
-                                return w;
-                            return new Way(member.Id, member.Role);
-                        })
+                        record.Members.Where(member => member.Type == O5mMemberType.Way)
+                            .Select(member =>
+                            {
+                                if (wayDictionary.TryGetValue(member.Id, out Way w))
+                                    return w;
+                                return new Way(member.Id, member.Role);
+                            })
                     );
 
                     foreach (var way in road.Ways)
@@ -221,6 +224,20 @@ namespace OsmPeregon
                 {
 #if DETAIL_ROAD_GEN_LOG
                     Console.WriteLine($"Skip road (incorrect): {road}");
+                    foreach (var incorrectWay in road.Ways.Where(w => !w.IsCorrect))
+                    {
+                        if (incorrectWay.EdgesRaw != null)
+                        {
+                            int i = 0;
+                            foreach (var incorrectEdge in incorrectWay.EdgesRaw)
+                            {
+                                Console.WriteLine($"Incorrect W:{incorrectWay.Id} E: {i}");
+                                i++;
+                            }
+                        }
+                        else
+                            Console.WriteLine($"Incorrect W:{incorrectWay.Id} ALL");
+                    }
 #endif
                     continue;
                 }

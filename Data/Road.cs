@@ -60,8 +60,10 @@ namespace OsmPeregon.Data
                 .Concat(ways.Select(w => Tuple.Create(w.Edges.Last().NodeEnd, w)));
             var mapEdge = (Lookup<long, Way>)t.ToLookup(s => s.Item1, s => s.Item2);
 
-            int entryPointsCount = mapEdge.Count(l => l.Count() == 1);
+            int entryPointsCount = mapEdge.Count(l => l.Count() == 1 && l.Any(w => !w.IsNotEnter));
             bool isRoundabout = entryPointsCount == 0;
+
+            var tt = mapEdge.Where(l => l.Count() == 1).ToList();
 
             chainForward = new List<Way>();
             int skipEntryPoint = 0;

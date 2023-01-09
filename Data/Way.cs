@@ -73,7 +73,13 @@ namespace OsmPeregon.Data
             }            
         }
 
-        public override string ToString() => $"W{Id} - Edge: {edges?.Count ?? 0} {(!IsCorrect ? '-' : ' ')} - {DirectionRoleChar} [{FirstNode}-{LastNode}] {(OrderStatus == OrderStatus.Reserve ? 'v' : ' ')}";
+        public override string ToString()
+        {
+            if (IsCorrect)
+                return $"W{Id} - Edge: {edges?.Count ?? 0} {(!IsCorrect ? '-' : ' ')} - {DirectionRoleChar} [{FirstNode}-{LastNode}] {(OrderStatus == OrderStatus.Reserve ? 'v' : ' ')}";
+            else
+                return $"W{Id} - Edge: {edges?.Count ?? 0} {(!IsCorrect ? '-' : ' ')} - {DirectionRoleChar}";
+        }
 
         private char DirectionRoleChar => DirectionRole switch { Direction.Forward => '↑', Direction.Backward => '↓', Direction.Both => '⇅', _ => 'X' };
     }
